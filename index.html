@@ -511,6 +511,18 @@ const SunstoneStyles = () => (
       flex: 1;
       overflow-y: auto;
       background: #FAFBFC;
+      display: flex;
+      flex-direction: column;
+    }
+    .initial-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 12px;
+      padding: 40px 32px;
     }
 
     .drawer-footer {
@@ -2227,11 +2239,8 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
 
   const handleProgramChange = (prog) => {
     setSelectedProgram(prog);
-    const newBatches = [...new Set(tabs.filter((t) => t.program === prog).map((t) => t.batch))];
-    const newBatch = newBatches[0] || "";
-    setSelectedBatch(newBatch);
-    const first = tabs.find((t) => t.program === prog && t.batch === newBatch);
-    if (first) setActiveTabId(first.id);
+    setSelectedBatch("");
+    setActiveTabId(null);
   };
 
   const handleBatchChange = (batch) => {
@@ -2365,12 +2374,10 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 </button>
               </div>
             ) : !activeTab ? (
-              <div className="empty-state">
-                <div className="empty-state-icon"><Calendar size={32} /></div>
+              <div className="initial-state">
+                <div className="empty-state-icon" style={{ background: "var(--color-primary-3)", color: "var(--color-primary)" }}><Calendar size={28} /></div>
                 <div className="empty-state-title">Select a program and batch to get started</div>
-                <div className="empty-state-desc">
-                  Use the dropdowns above to choose a program and batch year combination. You'll then see all subjects and sections for the upcoming semester ready to schedule.
-                </div>
+                <div className="empty-state-desc">Use the dropdowns above to choose a program and batch year combination. You'll then see all subjects and sections for the upcoming semester ready to schedule.</div>
               </div>
             ) : !activeTab.termDefined ? (
               <div className="empty-state">
