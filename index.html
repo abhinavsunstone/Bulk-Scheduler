@@ -2440,16 +2440,19 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 <div className="empty-state-desc">Use the dropdowns above to choose a program and batch year combination. You'll then see all subjects and sections for the upcoming semester ready to schedule.</div>
               </div>
             ) : !activeTab.termDefined ? (
-              <div className="empty-state">
-                <div className="empty-state-icon"><AlertCircle size={28} /></div>
-                <div className="empty-state-title">Term details aren't entered in Academic Management</div>
-                <div className="empty-state-desc">
-                  You can't schedule {activeTab.program} {activeTab.batch}{activeTab.degreeType ? ` ${activeTab.degreeType}` : ""}{activeTab.offering ? ` · ${activeTab.offering}` : ""} yet. Go to Academic Management and configure the upcoming term — start date, end date, session slot duration and weekly off — then come back here.
+              <>
+                <TermMetaStrip tab={activeTab} />
+                <div className="empty-state">
+                  <div className="empty-state-icon"><AlertCircle size={28} /></div>
+                  <div className="empty-state-title">Term details aren't entered in Academic Management</div>
+                  <div className="empty-state-desc">
+                    You can't schedule {activeTab.program} {activeTab.batch}{activeTab.degreeType ? ` ${activeTab.degreeType}` : ""}{activeTab.offering ? ` · ${activeTab.offering}` : ""} yet. Go to Academic Management and configure the upcoming term — start date, end date, session slot duration and weekly off — then come back here.
+                  </div>
+                  <button className="btn-medium btn-secondary-light">
+                    Open Academic Management <ChevronRight size={14} />
+                  </button>
                 </div>
-                <button className="btn-medium btn-secondary-light">
-                  Open Academic Management <ChevronRight size={14} />
-                </button>
-              </div>
+              </>
             ) : (
               <>
                 <TermMetaStrip tab={activeTab} onChangeSemester={(s) => {}} />
@@ -2536,8 +2539,8 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TermMetaStrip({ tab }) {
   const term = tab.term;
-  const workingDayLabels = term.workingDays.map((i) => DAY_LABELS[i]).join(", ");
-  const offDays = DAY_LABELS.filter((_, i) => !term.workingDays.includes(i)).join(", ") || "None";
+  const workingDayLabels = term ? term.workingDays.map((i) => DAY_LABELS[i]).join(", ") : "—";
+  const offDays = term ? (DAY_LABELS.filter((_, i) => !term.workingDays.includes(i)).join(", ") || "None") : "—";
   const fmt = (iso) => {
     if (!iso) return "—";
     const d = new Date(iso);
@@ -2548,22 +2551,22 @@ function TermMetaStrip({ tab }) {
       <div className="term-meta-list">
         <div className="term-meta-item">
           <div className="term-meta-label">Semester</div>
-          <select className="cascader-trigger" style={{ minWidth: 220, fontWeight: 600 }} defaultValue="upcoming">
-            <option value="upcoming">{term.label}</option>
-            <option value="current">Semester 2 — Current</option>
+          <select className="cascader-trigger" style={{ minWidth: 220, fontWeight: 600 }} defaultValue="upcoming" disabled={!term}>
+            <option value="upcoming">{term ? term.label : "Upcoming Semester"}</option>
+            {term && <option value="current">Semester 2 — Current</option>}
           </select>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Calendar size={14} /> Term Start</div>
-          <div className="term-meta-value">{fmt(term.startDate)}</div>
+          <div className="term-meta-value">{term ? fmt(term.startDate) : "—"}</div>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Calendar size={14} /> Term End</div>
-          <div className="term-meta-value">{fmt(term.endDate)}</div>
+          <div className="term-meta-value">{term ? fmt(term.endDate) : "—"}</div>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Clock size={14} /> Session Slot</div>
-          <div className="term-meta-value">{term.slotMinutes} min</div>
+          <div className="term-meta-value">{term ? `${term.slotMinutes} min` : "—"}</div>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Calendar size={14} /> Working Days</div>
