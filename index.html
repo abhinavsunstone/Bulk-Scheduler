@@ -1921,21 +1921,15 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   const [pausedOnErrorRowId, setPausedOnErrorRowId] = useState(null);
   const cancelRef = useRef(false);
 
-  const [selectedProgram, setSelectedProgram] = useState(() => {
-    const t = buildTabsForCampus(campusId);
-    return t[0]?.program || "";
-  });
-  const [selectedBatch, setSelectedBatch] = useState(() => {
-    const t = buildTabsForCampus(campusId);
-    return t[0]?.batch || "";
-  });
+  const [selectedProgram, setSelectedProgram] = useState("");
+  const [selectedBatch, setSelectedBatch] = useState("");
 
   useEffect(() => {
     const fresh = buildTabsForCampus(campusId);
     setTabs(fresh);
-    setActiveTabId(fresh[0] ? fresh[0].id : null);
-    setSelectedProgram(fresh[0]?.program || "");
-    setSelectedBatch(fresh[0]?.batch || "");
+    setActiveTabId(null);
+    setSelectedProgram("");
+    setSelectedBatch("");
     setPhase("edit");
     setProcessingRowId(null);
     setPausedOnErrorRowId(null);
@@ -2315,6 +2309,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                   onChange={(e) => handleProgramChange(e.target.value)}
                   disabled={phase === "submitting"}
                 >
+                  <option value="" disabled>Select program</option>
                   {uniquePrograms.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
@@ -2324,8 +2319,9 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                   className="filter-select"
                   value={selectedBatch}
                   onChange={(e) => handleBatchChange(e.target.value)}
-                  disabled={phase === "submitting"}
+                  disabled={phase === "submitting" || !selectedProgram}
                 >
+                  <option value="" disabled>Select batch year</option>
                   {batchesForProgram.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
@@ -2367,6 +2363,14 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 <button className="btn-medium btn-primary-light" onClick={handleFinish}>
                   <Check size={16} /> Finish
                 </button>
+              </div>
+            ) : !activeTab ? (
+              <div className="empty-state">
+                <div className="empty-state-icon"><Calendar size={32} /></div>
+                <div className="empty-state-title">Select a program and batch to get started</div>
+                <div className="empty-state-desc">
+                  Use the dropdowns above to choose a program and batch year combination. You'll then see all subjects and sections for the upcoming semester ready to schedule.
+                </div>
               </div>
             ) : !activeTab.termDefined ? (
               <div className="empty-state">
