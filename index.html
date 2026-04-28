@@ -68,6 +68,7 @@ const Play         = makeLucideIcon('Play');
 const Plus         = makeLucideIcon('Plus');
 const Minus        = makeLucideIcon('Minus');
 const ExternalLink = makeLucideIcon('ExternalLink');
+const ChevronLeft  = makeLucideIcon('ChevronLeft');
 
 /* ──────────────── BulkSchedule-2.jsx body follows (imports + export stripped) ──────────────── */
 
@@ -497,14 +498,37 @@ const SunstoneStyles = () => (
     .filter-select:focus { border-color: var(--color-primary); }
     .filter-select:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .tabs-scroll-wrap {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .tabs-arrow-btn {
+      flex-shrink: 0;
+      width: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #FAFBFC;
+      border: none;
+      cursor: pointer;
+      color: var(--color-neutral-dark-3);
+      transition: background 0.12s, color 0.12s;
+      border-right: 1px solid var(--color-neutral-dark-5);
+    }
+    .tabs-arrow-btn.right { border-right: none; border-left: 1px solid var(--color-neutral-dark-5); }
+    .tabs-arrow-btn:hover { background: var(--color-primary-3); color: var(--color-primary); }
     .drawer-tabs {
       display: flex;
       align-items: center;
       gap: 0;
       padding: 0 8px;
       background: #FAFBFC;
-      overflow-x: auto;
+      overflow-x: hidden;
       flex: 1;
+      scroll-behavior: smooth;
     }
 
     .drawer-body {
@@ -1936,6 +1960,24 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
 
+  const tabsScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkTabsScroll = () => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  };
+
+  const scrollTabsBy = (dir) => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * 200, behavior: "smooth" });
+    setTimeout(checkTabsScroll, 350);
+  };
+
   useEffect(() => {
     const fresh = buildTabsForCampus(campusId);
     setTabs(fresh);
@@ -1969,6 +2011,10 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   const uniquePrograms = useMemo(() => [...new Set(tabs.map((t) => t.program))], [tabs]);
   const batchesForProgram = useMemo(() => [...new Set(tabs.filter((t) => t.program === selectedProgram).map((t) => t.batch))], [tabs, selectedProgram]);
   const filteredTabs = useMemo(() => tabs.filter((t) => t.program === selectedProgram && t.batch === selectedBatch), [tabs, selectedProgram, selectedBatch]);
+
+  useEffect(() => {
+    setTimeout(checkTabsScroll, 50);
+  }, [filteredTabs]);
 
   const totalRows = useMemo(() => tabs.reduce((s, t) => s + (t.termDefined ? t.rows.length : 0), 0), [tabs]);
   const scheduledRows = useMemo(() => tabs.reduce((s, t) => s + t.rows.filter((r) => r.status === "scheduled").length, 0), [tabs]);
@@ -2335,29 +2381,41 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 </select>
               </div>
             </div>
-            <div className="drawer-tabs" role="tablist">
-              {filteredTabs.map((t) => {
-                const label = [t.degreeType, t.offering].filter(Boolean).join(" · ") || "Default";
-                const errCount = tabErrorCounts[t.id] || 0;
-                const doneCount = t.rows.filter((r) => r.status === "scheduled").length;
-                const allDone = t.rows.length > 0 && doneCount === t.rows.length;
-                return (
-                  <button
-                    key={t.id}
-                    className={`tab-line ${activeTabId === t.id ? "active" : ""}`}
-                    onClick={() => switchToTab(t.id)}
-                    role="tab"
-                    aria-selected={activeTabId === t.id}
-                  >
-                    {label}
-                    {!t.termDefined && <span className="tag-small tag-warning" style={{ padding: "0 6px" }}>No term</span>}
-                    {t.termDefined && errCount > 0 && phase !== "done" && (
-                      <span title={`${errCount} row(s) need attention`} className="tab-error-dot" />
-                    )}
-                    {t.termDefined && allDone && <span title="All scheduled" className="tab-done-dot" />}
-                  </button>
-                );
-              })}
+            <div className="tabs-scroll-wrap">
+              {canScrollLeft && (
+                <button className="tabs-arrow-btn left" onClick={() => scrollTabsBy(-1)} aria-label="Scroll tabs left">
+                  <ChevronLeft size={14} />
+                </button>
+              )}
+              <div className="drawer-tabs" ref={tabsScrollRef} role="tablist" onScroll={checkTabsScroll}>
+                {filteredTabs.map((t) => {
+                  const label = [t.degreeType, t.offering].filter(Boolean).join(" · ") || "Default";
+                  const errCount = tabErrorCounts[t.id] || 0;
+                  const doneCount = t.rows.filter((r) => r.status === "scheduled").length;
+                  const allDone = t.rows.length > 0 && doneCount === t.rows.length;
+                  return (
+                    <button
+                      key={t.id}
+                      className={`tab-line ${activeTabId === t.id ? "active" : ""}`}
+                      onClick={() => switchToTab(t.id)}
+                      role="tab"
+                      aria-selected={activeTabId === t.id}
+                    >
+                      {label}
+                      {!t.termDefined && <span className="tag-small tag-warning" style={{ padding: "0 6px" }}>No term</span>}
+                      {t.termDefined && errCount > 0 && phase !== "done" && (
+                        <span title={`${errCount} row(s) need attention`} className="tab-error-dot" />
+                      )}
+                      {t.termDefined && allDone && <span title="All scheduled" className="tab-done-dot" />}
+                    </button>
+                  );
+                })}
+              </div>
+              {canScrollRight && (
+                <button className="tabs-arrow-btn right" onClick={() => scrollTabsBy(1)} aria-label="Scroll tabs right">
+                  <ChevronRight size={14} />
+                </button>
+              )}
             </div>
           </div>
 
