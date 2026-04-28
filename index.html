@@ -570,7 +570,9 @@ const SunstoneStyles = () => (
       margin: 10px 20px 0;
       gap: 16px;
       overflow-x: auto;
+      scrollbar-width: none;
     }
+    .term-strip::-webkit-scrollbar { display: none; }
     .term-meta-list {
       display: grid;
       grid-auto-flow: column;
