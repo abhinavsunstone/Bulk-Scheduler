@@ -2435,7 +2435,6 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                       aria-selected={activeTabId === t.id}
                     >
                       {label}
-                      {!t.termDefined && <span className="tag-small tag-warning" style={{ padding: "0 6px" }}>No term</span>}
                       {t.termDefined && errCount > 0 && phase !== "done" && (
                         <span title={`${errCount} row(s) need attention`} className="tab-error-dot" />
                       )}
