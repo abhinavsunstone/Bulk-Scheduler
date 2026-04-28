@@ -1722,17 +1722,21 @@ function buildTabsForCampus(campusId) {
     const tabLabel = `${p.program} ${p.batch}${degreeType ? " · " + degreeType : ""} · ${p.offering}`;
 
     const TODAY = new Date().toISOString().slice(0, 10);
-    const futureTerm = (p.terms || []).find(
-      (t) => t.end_date && t.end_date >= TODAY && (t.subjects || []).length > 0
-    ) || (p.terms || []).find((t) => t.end_date && t.end_date >= TODAY);
+    const termsWithSubjects = (p.terms || []).filter((t) => (t.subjects || []).length > 0);
+    const futureTerm =
+      termsWithSubjects.find((t) => t.end_date && t.end_date >= TODAY) ||
+      (p.terms || []).find((t) => t.end_date && t.end_date >= TODAY) ||
+      termsWithSubjects.sort((a, b) => (b.number || 0) - (a.number || 0))[0];
     const activeTerm = futureTerm;
 
-    const allTerms = (p.terms || [])
-      .filter((t) => t.number != null)
-      .sort((a, b) => (a.number || 0) - (b.number || 0))
-      .map((t) => {
+    const sortedTerms = (p.terms || []).filter((t) => t.number != null).sort((a, b) => (a.number || 0) - (b.number || 0));
+    const hasTrueFuture = sortedTerms.some((t) => t.end_date && t.end_date >= TODAY);
+    const maxNumber = sortedTerms.length ? sortedTerms[sortedTerms.length - 1].number : null;
+    const allTerms = sortedTerms.map((t) => {
         const typeLabel = t.type === "trimester" ? "Trimester" : "Semester";
-        const status = !t.end_date ? "Upcoming"
+        const isFallbackUpcoming = !hasTrueFuture && t.number === maxNumber;
+        const status = isFallbackUpcoming ? "Upcoming"
+          : !t.end_date ? "Upcoming"
           : t.end_date < TODAY ? "Past"
           : (!t.start_date || t.start_date > TODAY) ? "Upcoming"
           : "Current";
