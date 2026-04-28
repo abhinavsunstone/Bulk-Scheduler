@@ -1726,6 +1726,31 @@ function buildTabsForCampus(campusId) {
       (t) => t.end_date && t.end_date >= TODAY && (t.subjects || []).length > 0
     ) || (p.terms || []).find((t) => t.end_date && t.end_date >= TODAY);
     const activeTerm = futureTerm;
+
+    const allTerms = (p.terms || [])
+      .filter((t) => t.number != null)
+      .sort((a, b) => (a.number || 0) - (b.number || 0))
+      .map((t) => {
+        const typeLabel = t.type === "trimester" ? "Trimester" : "Semester";
+        const status = !t.end_date ? "Upcoming"
+          : t.end_date < TODAY ? "Past"
+          : (!t.start_date || t.start_date > TODAY) ? "Upcoming"
+          : "Current";
+        const wDays = (t.working_days || [])
+          .map((d) => DAY_NAME_TO_INDEX[d.toLowerCase()])
+          .filter((i) => i !== undefined)
+          .sort();
+        return {
+          number: t.number,
+          label: `${typeLabel} ${t.number} — ${status}`,
+          startDate: t.start_date || "",
+          endDate: t.end_date || "",
+          slotMinutes: t.slot_duration_minutes || 0,
+          workingDays: wDays,
+          status,
+        };
+      });
+
     if (!activeTerm) {
       return {
         id: baseId,
@@ -1735,6 +1760,7 @@ function buildTabsForCampus(campusId) {
         offering: p.offering,
         termDefined: false,
         term: null,
+        allTerms,
         rows: [],
       };
     }
@@ -1793,6 +1819,7 @@ function buildTabsForCampus(campusId) {
         slotMinutes: activeTerm.slot_duration_minutes || 60,
         workingDays,
       },
+      allTerms,
       rows,
     };
   });
@@ -2538,35 +2565,47 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
    TERM META STRIP
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function TermMetaStrip({ tab }) {
-  const term = tab.term;
-  const workingDayLabels = term ? term.workingDays.map((i) => DAY_LABELS[i]).join(", ") : "—";
-  const offDays = term ? (DAY_LABELS.filter((_, i) => !term.workingDays.includes(i)).join(", ") || "None") : "—";
+  const allTerms = tab.allTerms || [];
+  const defaultIdx = Math.max(0, allTerms.findIndex((t) => t.status === "Upcoming"));
+  const [selIdx, setSelIdx] = useState(defaultIdx);
+
+  const dt = allTerms[selIdx] || null;
+  const workingDayLabels = dt ? dt.workingDays.map((i) => DAY_LABELS[i]).join(", ") : "—";
+  const offDays = dt ? (DAY_LABELS.filter((_, i) => !dt.workingDays.includes(i)).join(", ") || "None") : "—";
   const fmt = (iso) => {
     if (!iso) return "—";
-    const d = new Date(iso);
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   };
+
   return (
     <div className="term-strip">
       <div className="term-meta-list">
         <div className="term-meta-item">
           <div className="term-meta-label">Semester</div>
-          <select className="cascader-trigger" style={{ minWidth: 220, fontWeight: 600 }} defaultValue="upcoming" disabled={!term}>
-            <option value="upcoming">{term ? term.label : "Upcoming Semester"}</option>
-            {term && <option value="current">Semester 2 — Current</option>}
+          <select
+            className="cascader-trigger"
+            style={{ minWidth: 220, fontWeight: 600 }}
+            value={selIdx}
+            onChange={(e) => setSelIdx(Number(e.target.value))}
+            disabled={allTerms.length === 0}
+          >
+            {allTerms.length === 0
+              ? <option value={0}>Upcoming Semester</option>
+              : allTerms.map((t, i) => <option key={i} value={i}>{t.label}</option>)
+            }
           </select>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Calendar size={14} /> Term Start</div>
-          <div className="term-meta-value">{term ? fmt(term.startDate) : "—"}</div>
+          <div className="term-meta-value">{fmt(dt?.startDate)}</div>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Calendar size={14} /> Term End</div>
-          <div className="term-meta-value">{term ? fmt(term.endDate) : "—"}</div>
+          <div className="term-meta-value">{fmt(dt?.endDate)}</div>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Clock size={14} /> Session Slot</div>
-          <div className="term-meta-value">{term ? `${term.slotMinutes} min` : "—"}</div>
+          <div className="term-meta-value">{dt ? `${dt.slotMinutes} min` : "—"}</div>
         </div>
         <div className="term-meta-item">
           <div className="term-meta-label"><Calendar size={14} /> Working Days</div>
