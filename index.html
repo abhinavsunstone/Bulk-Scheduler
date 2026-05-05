@@ -7,6 +7,7 @@
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+<script async src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; min-height: 100%; }
   body { background: #F5F6FA; }
@@ -69,6 +70,8 @@ const Plus         = makeLucideIcon('Plus');
 const Minus        = makeLucideIcon('Minus');
 const ExternalLink = makeLucideIcon('ExternalLink');
 const ChevronLeft  = makeLucideIcon('ChevronLeft');
+const Upload       = makeLucideIcon('Upload');
+const Download     = makeLucideIcon('Download');
 
 /* ──────────────── BulkSchedule-2.jsx body follows (imports + export stripped) ──────────────── */
 
@@ -1227,6 +1230,17 @@ const SunstoneStyles = () => (
       align-items: center;
       justify-content: center;
       gap: 8px;
+      margin-bottom: 10px;
+    }
+    .demo-rail-import-btn {
+      width: 100%;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       margin-bottom: 20px;
     }
 
@@ -1440,6 +1454,47 @@ const SunstoneStyles = () => (
 
     /* tooltip on hover (row error) */
     .cell-error { color: var(--color-error-2); font-weight: 600; }
+
+    /* ── IMPORT STEP ──────────────────────── */
+    .import-step { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+    .import-dropzone {
+      border: 2px dashed var(--color-neutral-dark-4);
+      border-radius: 8px; padding: 40px 24px; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s; background: var(--color-primary-3);
+    }
+    .import-dropzone:hover, .import-dropzone.drag-over { border-color: var(--color-primary); background: #eef0f8; }
+    .import-dropzone-icon {
+      width: 48px; height: 48px; border-radius: 50%; background: var(--color-primary); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;
+    }
+    .import-dropzone-title { font-size: 15px; font-weight: 600; color: var(--color-neutral-dark-1); margin-bottom: 4px; }
+    .import-dropzone-sub { font-size: 13px; color: var(--color-neutral-dark-2); }
+    .import-summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .import-summary-table th {
+      text-align: left; padding: 8px 12px; font-weight: 600; color: var(--color-neutral-dark-2);
+      border-bottom: 1px solid var(--color-neutral-dark-5); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .import-summary-table td {
+      padding: 8px 12px; border-bottom: 1px solid var(--color-neutral-dark-6);
+      color: var(--color-neutral-dark-1); vertical-align: middle;
+    }
+    .import-summary-table tr:last-child td { border-bottom: none; }
+    .import-step-title { font-size: 15px; font-weight: 700; color: var(--color-neutral-dark-1); }
+    .import-step-sub { font-size: 13px; color: var(--color-neutral-dark-2); margin-top: 2px; }
+    .import-step-divider { border: none; border-top: 1px solid var(--color-neutral-dark-5); margin: 0; }
+    .import-issues { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+    .import-issue {
+      display: flex; gap: 10px; padding: 10px 12px; border-radius: 4px;
+      font-size: 12px; border-left: 3px solid; align-items: flex-start;
+    }
+    .import-issue-error   { background: var(--color-error-5);   border-left-color: var(--color-error-1); }
+    .import-issue-warning { background: var(--color-warning-5); border-left-color: var(--color-warning-1); }
+    .import-issue-info    { background: var(--color-info-5);    border-left-color: var(--color-info-1); }
+    .import-issue-icon    { flex-shrink: 0; margin-top: 1px; }
+    .import-issue-msg     { font-weight: 600; color: var(--color-neutral-dark-1); line-height: 16px; }
+    .import-issue-detail  { color: var(--color-neutral-dark-2); margin-top: 2px; line-height: 16px; }
+    .import-issues-header { font-size: 12px; font-weight: 700; color: var(--color-neutral-dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
   `}</style>
 );
 
@@ -1504,6 +1559,452 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_NAME_TO_INDEX = { monday: 0, tuesday: 1, wednesday: 2, thursday: 3, friday: 4, saturday: 5, sunday: 6 };
 
 /** Build an initial row */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   XLSX TIMETABLE PARSER UTILITIES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const DAY_TO_IDX = { MON: 0, TUE: 1, WED: 2, THU: 3, FRI: 4, SAT: 5, SUN: 6 };
+
+function normSubjectName(s) {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function matchFacultyByName(rawName, facultyList) {
+  if (!rawName) return "";
+  const strip = (s) =>
+    s.toLowerCase().replace(/^(mr\.|mrs\.|ms\.|dr\.|prof\.)\s*/i, "").replace(/\s+/g, " ").trim();
+  const target = strip(rawName);
+  let f = facultyList.find((x) => strip(x.name) === target);
+  if (!f) f = facultyList.find((x) => { const n = strip(x.name); return n.includes(target) || target.includes(n); });
+  return f ? String(f.id) : "";
+}
+
+function parseXlsxTimetable(workbook) {
+  const sheetMeta = {};
+  const idxWs = workbook.Sheets["Index"];
+  if (idxWs) {
+    const rows = XLSX.utils.sheet_to_json(idxWs, { header: 1, defval: null });
+    for (const row of rows) {
+      if (!row[0] || row[0] === "Sheet") continue;
+      const [name, program, batch, offering] = row;
+      if (typeof name === "string" && program)
+        sheetMeta[name] = { program: String(program), batch: String(batch), offering: String(offering) };
+    }
+  }
+
+  const parsed = {};
+  for (const sheetName of workbook.SheetNames) {
+    if (sheetName === "Index") continue;
+    const ws = workbook.Sheets[sheetName];
+    if (!ws) continue;
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    if (rows.length < 3) continue;
+
+    let termStart = "", termEnd = "";
+    const hdr = String(rows[0]?.[0] || "");
+    const dm = hdr.match(/(\d{4}-\d{2}-\d{2})\s*[→\-]\s*(\d{4}-\d{2}-\d{2})/);
+    if (dm) { termStart = dm[1]; termEnd = dm[2]; }
+
+    const colHeaders = rows[1] || [];
+    const slotCols = [];
+    for (let c = 2; c < colHeaders.length; c++) {
+      const h = String(colHeaders[c] || "");
+      if (/lunch/i.test(h)) continue;
+      const m = h.match(/(\d{1,2}:\d{2})[–\-](\d{1,2}:\d{2})/);
+      if (m) slotCols.push({ colIdx: c, startTime: m[1], endTime: m[2] });
+    }
+
+    let refStart = -1;
+    for (let r = 2; r < rows.length; r++) {
+      const c0 = String(rows[r]?.[0] || "").trim();
+      if (c0 === "#" || /Subject Reference/i.test(c0)) { refStart = r; break; }
+    }
+    const tblEnd = refStart > -1 ? refStart : rows.length;
+
+    const timetableEntries = [];
+    let curDay = "";
+    for (let r = 2; r < tblEnd; r++) {
+      const row = rows[r] || [];
+      const dayCell = String(row[0] || "").trim().toUpperCase().substring(0, 3);
+      const secCell = String(row[1] || "").trim();
+      if (dayCell && DAY_TO_IDX[dayCell] !== undefined) curDay = dayCell;
+      if (!curDay || !secCell) continue;
+      for (const sc of slotCols) {
+        const subj = String(row[sc.colIdx] || "").trim();
+        if (subj) timetableEntries.push({ day: curDay, section: secCell, subject: subj, startTime: sc.startTime, endTime: sc.endTime });
+      }
+    }
+
+    const facultyMap = {};
+    if (refStart > -1) {
+      let dataStart = refStart + 1;
+      for (let r = refStart; r < Math.min(refStart + 5, rows.length); r++) {
+        if (String(rows[r]?.[0] || "").trim() === "#") { dataStart = r + 1; break; }
+      }
+      for (let r = dataStart; r < rows.length; r++) {
+        const row = rows[r] || [];
+        if (row[0] == null) continue;
+        const name = String(row[1] || "").trim();
+        const fac  = String(row[3] || "").trim();
+        if (name) facultyMap[normSubjectName(name)] = { faculty: fac, originalName: name };
+      }
+    }
+
+    parsed[sheetName] = { meta: sheetMeta[sheetName] || null, termStart, termEnd, timetableEntries, facultyMap };
+  }
+  return parsed;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   IMPORT STEP COMPONENT
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TEMPLATE GENERATOR
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const STANDARD_SLOTS = [
+  { label: "Slot 1", start: "08:30", end: "09:20" },
+  { label: "Slot 2", start: "09:20", end: "10:10" },
+  { label: "Slot 3", start: "10:10", end: "11:00" },
+  { label: "Slot 4", start: "11:00", end: "11:50" },
+  { label: "Slot 5", start: "11:50", end: "12:40" },
+  { label: "Lunch",  start: "12:40", end: "13:10", isLunch: true },
+  { label: "Slot 6", start: "13:10", end: "14:00" },
+  { label: "Slot 7", start: "14:00", end: "14:50" },
+  { label: "Slot 8", start: "14:50", end: "15:40" },
+  { label: "Slot 9", start: "15:40", end: "16:30" },
+];
+
+function makeSheetName(tab) {
+  const prog = tab.program.split(/[\s(]/)[0].toUpperCase();
+  const offering = /flag/i.test(tab.offering) ? "Flag" : "Core";
+  const degree = tab.degreeType ? tab.degreeType.replace(/[^A-Za-z]/g, "").substring(0, 5) : "";
+  const raw = degree ? `${prog}${tab.batch}-${degree}-${offering}` : `${prog}${tab.batch}-${offering}`;
+  return raw.substring(0, 31);
+}
+
+function generateTimetableTemplate(tabs, campusName) {
+  if (typeof XLSX === "undefined") {
+    alert("XLSX library is still loading — please try again in a moment.");
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const year = new Date().getFullYear();
+  const validTabs = tabs.filter((t) => t.termDefined && t.rows.length > 0);
+  const DAY_NAMES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+  /* Index sheet */
+  const indexRows = [
+    [campusName],
+    [`Timetable — ${year}  |  One sheet per batch`],
+    ["How to use:"],
+    ["1. Open the sheet for your batch (e.g. BBA2025-Core)"],
+    ["2. Each row = a weekday + section.  Each column = a time slot."],
+    ["3. Type the subject name in the cell where that class is scheduled."],
+    ["4. Greyed rows = non-working days (leave blank)."],
+    ["5. Refer to the Subject Reference table at the bottom of each sheet for the full subject list."],
+    [],
+    ["Sheet", "Program", "Batch", "Offering", "Subjects", "Sections", "Term"],
+  ];
+  for (const tab of validTabs) {
+    const name = makeSheetName(tab);
+    const uniqueSubjs = [...new Map(tab.rows.map((r) => [r.subjectId, r])).values()];
+    const uniqueSecs  = [...new Set(tab.rows.map((r) => r.sections[0] || "A"))];
+    const termStr = tab.term ? `Sem ${tab.term.label?.match(/\d+/)?.[0] || 1}  ${tab.term.startDate} → ${tab.term.endDate}` : "";
+    indexRows.push([name, tab.program, tab.batch, tab.offering, uniqueSubjs.length, uniqueSecs.length, termStr]);
+  }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(indexRows), "Index");
+
+  /* One sheet per program-batch-offering */
+  for (const tab of validTabs) {
+    const sheetName = makeSheetName(tab);
+    const dateRange = tab.term ? `${tab.term.startDate} → ${tab.term.endDate}` : "";
+    const slotMin   = tab.term?.slotMinutes || 60;
+
+    const row0 = [`${tab.program} — Batch ${tab.batch} · ${tab.offering}   |   ${dateRange}   |   Slot = ${slotMin} min`];
+    const row1 = ["Day", "Section", ...STANDARD_SLOTS.map((s) => `${s.label}\n${s.start}–${s.end}`)];
+
+    /* Timetable grid rows */
+    const wDays = (tab.term?.workingDays || [0, 1, 2, 3, 4, 5]).map((i) => DAY_NAMES[i]);
+    const allSecs = [...new Set(tab.rows.map((r) => r.sections[0] || "A"))].sort();
+    const secLabels = allSecs.length === 1 ? ["All"] : allSecs.map((s) => `Sec ${s}`);
+    const gridRows = [];
+    for (const day of wDays) {
+      for (let i = 0; i < secLabels.length; i++) {
+        gridRows.push([i === 0 ? day : null, secLabels[i], ...STANDARD_SLOTS.map(() => null)]);
+      }
+    }
+
+    /* Subject Reference table */
+    const uniqueSubjs = [...new Map(tab.rows.map((r) => [r.subjectId, r])).values()];
+    const refRows = [
+      [],
+      ["  Subject Reference — enter subject names in the timetable grid above"],
+      ["#", "Subject name", "Type", "Faculty", "Section(s)", "Credits (L/P/T)"],
+      ...uniqueSubjs.map((row, i) => {
+        const secLabel = tab.rows.filter((r) => r.subjectId === row.subjectId).map((r) => r.sections[0] || "A").join("/");
+        return [i + 1, row.subject, row.isLab ? "Lab" : (row.subjectType === "core" ? "Core" : row.subjectType || "Core"), "", secLabel, ""];
+      }),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([row0, row1, ...gridRows, ...refRows]);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  }
+
+  XLSX.writeFile(wb, `Timetable_Template_${campusName.replace(/[^A-Za-z0-9]/g, "_")}_${year}.xlsx`);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   IMPORT VALIDATION
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function findMatchingTab(sheetData, tabs) {
+  return tabs.find((tab) => {
+    if (!sheetData.meta || !tab.termDefined) return false;
+    const { program, batch, offering } = sheetData.meta;
+    if (batch !== tab.batch) return false;
+    const offerOk =
+      offering.toLowerCase() === tab.offering.toLowerCase() ||
+      (/flag/i.test(offering) && /flag/i.test(tab.offering));
+    if (!offerOk) return false;
+    const shortProg = program.split(/[\s(]/)[0].toUpperCase();
+    return tab.program.toUpperCase().startsWith(shortProg);
+  }) || null;
+}
+
+function validateImportData(parsed, tabs, facultyList) {
+  const issues = [];
+
+  for (const [sheetName, data] of Object.entries(parsed)) {
+    const tab = findMatchingTab(data, tabs);
+
+    /* Sheet not matched to any program in the system */
+    if (!tab) {
+      if (data.meta) {
+        issues.push({
+          type: "warning", category: "sheet_unmatched", sheet: sheetName,
+          message: `Sheet not matched: ${sheetName}`,
+          detail: `"${data.meta.program} ${data.meta.batch} · ${data.meta.offering}" has no corresponding program in this campus.`,
+        });
+      }
+      continue;
+    }
+
+    const tabNormNames = new Set(tab.rows.map((r) => normSubjectName(r.subject)));
+
+    /* Subject name mismatch — reference table entry doesn't match any system subject */
+    for (const [normName, ref] of Object.entries(data.facultyMap)) {
+      if (!tabNormNames.has(normName)) {
+        issues.push({
+          type: "error", category: "subject_mismatch", sheet: sheetName,
+          message: `Subject mismatch — "${ref.originalName}"`,
+          detail: `Not found in ${tab.program} ${tab.batch} · ${tab.offering}. The subject name may differ from what's configured in Academic Management.`,
+        });
+      }
+    }
+
+    /* Subject in timetable grid not in reference table (no faculty info) */
+    const refNormNames = new Set(Object.keys(data.facultyMap));
+    const timetableSubjects = new Set(data.timetableEntries.map((e) => normSubjectName(e.subject)));
+    for (const normName of timetableSubjects) {
+      if (!refNormNames.has(normName)) {
+        const raw = data.timetableEntries.find((e) => normSubjectName(e.subject) === normName)?.subject || normName;
+        issues.push({
+          type: "warning", category: "missing_reference", sheet: sheetName,
+          message: `No reference entry — "${raw}"`,
+          detail: `Appears in the timetable grid but not in the Subject Reference table. Faculty cannot be determined.`,
+        });
+      }
+    }
+
+    /* Faculty not aligned — name in Excel doesn't match any faculty in system */
+    for (const [normName, ref] of Object.entries(data.facultyMap)) {
+      if (!ref.faculty) continue;
+      const fid = matchFacultyByName(ref.faculty, facultyList);
+      if (!fid) {
+        issues.push({
+          type: "warning", category: "faculty_unmatched", sheet: sheetName,
+          message: `Faculty not found — "${ref.faculty}"`,
+          detail: `Assigned to "${ref.originalName}" in ${tab.program} ${tab.batch}. The name may not match what's in the faculty directory.`,
+        });
+      }
+    }
+
+    /* Slot overlap — same section scheduled twice at the same day + time */
+    const slotMap = {};
+    for (const e of data.timetableEntries) {
+      const key = `${e.day}||${e.section}||${e.startTime}`;
+      if (!slotMap[key]) slotMap[key] = [];
+      slotMap[key].push(e.subject);
+    }
+    for (const [key, subjects] of Object.entries(slotMap)) {
+      if (subjects.length > 1) {
+        const [day, section, time] = key.split("||");
+        const unique = [...new Set(subjects)];
+        issues.push({
+          type: "error", category: "slot_overlap", sheet: sheetName,
+          message: `Slot overlap — ${day} ${section} at ${time}`,
+          detail: `${unique.join(", ")} are all scheduled in the same slot. Only the first will be used.`,
+        });
+      }
+    }
+  }
+
+  /* Sort: errors first, then warnings */
+  return issues.sort((a, b) => (a.type === "error" ? -1 : 1) - (b.type === "error" ? -1 : 1));
+}
+
+function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus" }) {
+  const [dragging, setDragging] = useState(false);
+  const [parsed, setParsed]     = useState(null);
+  const [issues, setIssues]     = useState([]);
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(false);
+  const fileInputRef            = useRef(null);
+
+  const handleFile = (file) => {
+    if (!file) return;
+    if (!/\.(xlsx|xls)$/i.test(file.name)) { setError("Please upload an .xlsx or .xls file."); return; }
+    setLoading(true); setError(""); setParsed(null); setIssues([]);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: "array" });
+        const result = parseXlsxTimetable(wb);
+        setParsed(result);
+        setIssues(validateImportData(result, tabs, facultyList));
+      } catch (err) { setError("Could not parse: " + err.message); }
+      setLoading(false);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const summary = parsed
+    ? Object.entries(parsed).map(([sheet, data]) => ({
+        sheet, meta: data.meta,
+        subjects: Object.keys(data.facultyMap).length,
+        entries: data.timetableEntries.length,
+      }))
+    : [];
+  const totalEntries  = summary.reduce((s, x) => s + x.entries, 0);
+  const totalSubjects = summary.reduce((s, x) => s + x.subjects, 0);
+  const errorCount    = issues.filter((i) => i.type === "error").length;
+  const warnCount     = issues.filter((i) => i.type === "warning").length;
+
+  return (
+    <div className="import-step">
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <div className="import-step-title">Step 1 — Import Timetable</div>
+          <div className="import-step-sub">Upload your filled timetable template (.xlsx) to pre-populate faculty, days and time slots across all batches.</div>
+        </div>
+        <button
+          className="btn-medium btn-secondary-light"
+          style={{ flexShrink: 0, fontSize: 13, padding: "7px 12px", whiteSpace: "nowrap" }}
+          onClick={() => generateTimetableTemplate(tabs, campusName)}
+          title="Download a blank template pre-filled with your campus subjects"
+        >
+          <Download size={14} /> Download Template
+        </button>
+      </div>
+
+      {!parsed ? (
+        <div
+          className={`import-dropzone${dragging ? " drag-over" : ""}`}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
+          onClick={() => !loading && fileInputRef.current?.click()}
+        >
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }}
+            onChange={(e) => handleFile(e.target.files[0])} />
+          <div className="import-dropzone-icon">
+            {loading ? <Loader2 size={22} className="spin" /> : <Plus size={22} />}
+          </div>
+          <div className="import-dropzone-title">
+            {loading ? "Parsing file…" : "Click or drag your timetable .xlsx here"}
+          </div>
+          <div className="import-dropzone-sub">Sunstone timetable template format supported</div>
+          {error && <div style={{ marginTop: 10, color: "var(--color-error-2)", fontSize: 13 }}>{error}</div>}
+        </div>
+      ) : (
+        <>
+          <div className={`alert ${errorCount > 0 ? "alert-warning" : "alert-success"}`}>
+            <div className="alert-title">
+              {summary.length} sheet{summary.length !== 1 ? "s" : ""} parsed
+              {issues.length > 0 && ` · ${errorCount > 0 ? `${errorCount} error${errorCount > 1 ? "s" : ""}` : ""}${errorCount > 0 && warnCount > 0 ? ", " : ""}${warnCount > 0 ? `${warnCount} warning${warnCount > 1 ? "s" : ""}` : ""}`}
+            </div>
+            <div className="alert-description">
+              {totalEntries > 0 ? `${totalEntries} slot entries` : "Template is blank — no slot entries"}{totalSubjects > 0 ? `, ${totalSubjects} subjects with faculty` : ""}.
+            </div>
+          </div>
+
+          <table className="import-summary-table">
+            <thead>
+              <tr>
+                <th>Sheet</th><th>Program · Batch</th><th>Offering</th><th>Subjects</th><th>Slot entries</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.map((s) => (
+                <tr key={s.sheet}>
+                  <td><code style={{ fontSize: 11, background: "var(--color-primary-3)", padding: "2px 6px", borderRadius: 3 }}>{s.sheet}</code></td>
+                  <td>{s.meta ? `${s.meta.program} · ${s.meta.batch}` : <span style={{ color: "var(--color-neutral-dark-3)" }}>—</span>}</td>
+                  <td>{s.meta?.offering || "—"}</td>
+                  <td>{s.subjects}</td>
+                  <td>{s.entries > 0
+                    ? <span className="tag-small tag-success">{s.entries} filled</span>
+                    : <span className="tag-small tag-warning">blank</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {issues.length > 0 && (
+            <div>
+              <div className="import-issues-header">
+                {errorCount > 0 && <span style={{ color: "var(--color-error-2)" }}>{errorCount} Error{errorCount > 1 ? "s" : ""}</span>}
+                {errorCount > 0 && warnCount > 0 && <span style={{ color: "var(--color-neutral-dark-3)", margin: "0 6px" }}>·</span>}
+                {warnCount > 0 && <span style={{ color: "var(--color-warning-2)" }}>{warnCount} Warning{warnCount > 1 ? "s" : ""}</span>}
+              </div>
+              <div className="import-issues">
+                {issues.map((issue, idx) => (
+                  <div key={idx} className={`import-issue import-issue-${issue.type}`}>
+                    <div className="import-issue-icon">
+                      {issue.type === "error"
+                        ? <AlertCircle size={13} color="var(--color-error-2)" />
+                        : <Info size={13} color="var(--color-warning-2)" />}
+                    </div>
+                    <div>
+                      <div className="import-issue-msg">{issue.message}</div>
+                      {issue.detail && <div className="import-issue-detail">{issue.detail}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {issues.length === 0 && (
+            <div className="alert alert-success" style={{ padding: "8px 14px" }}>
+              <div className="alert-title" style={{ fontSize: 12 }}>All subjects and faculty matched — no issues found</div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button className="btn-medium btn-secondary-light" onClick={() => { setParsed(null); setIssues([]); }}>Re-upload</button>
+            <button className="btn-medium btn-primary-light" onClick={() => onImport(parsed)}>
+              <Check size={14} /> Load into Scheduler
+            </button>
+          </div>
+        </>
+      )}
+
+      <hr className="import-step-divider" />
+      <button className="btn-text-14" onClick={onSkip}>
+        Skip — enter manually <ChevronRight size={14} />
+      </button>
+    </div>
+  );
+}
+
 const mkRow = (overrides = {}) => ({
   id: Math.random().toString(36).slice(2, 9),
   subjectId: null,
@@ -1979,16 +2480,20 @@ function detectRowConflicts(targetRow, targetTab, allTabs) {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    MAIN MODAL COMPONENT
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campusName = "Hi-Tech Institute of Technology" }) {
+function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campusName = "Hi-Tech Institute of Technology", openPhase = "import" }) {
   const [tabs, setTabs] = useState(() => buildTabsForCampus(campusId));
   const [activeTabId, setActiveTabId] = useState(() => {
     const first = buildTabsForCampus(campusId)[0];
     return first ? first.id : null;
   });
-  const [phase, setPhase] = useState("edit");
+  const [phase, setPhase] = useState("import");
   const [processingRowId, setProcessingRowId] = useState(null);
   const [pausedOnErrorRowId, setPausedOnErrorRowId] = useState(null);
   const cancelRef = useRef(false);
+
+  useEffect(() => {
+    if (open) setPhase(openPhase);
+  }, [open]);
 
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
@@ -2359,11 +2864,82 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   const handleFinish = () => {
     onClose?.();
     setTimeout(() => {
-      setPhase("edit");
+      setPhase("import");
       const fresh = buildTabsForCampus(campusId);
       setTabs(fresh);
       setActiveTabId(fresh[0] ? fresh[0].id : null);
     }, 300);
+  };
+
+  const applyImportedData = (parsed) => {
+    const campus = CAMPUS_DATA.campuses.find((c) => c.id === campusId);
+    const facultyList = campus ? campus.faculty : [];
+
+    const updatedTabs = tabs.map((tab) => {
+        if (!tab.termDefined) return tab;
+
+        const sheetData = Object.values(parsed).find((s) => {
+          if (!s.meta) return false;
+          const { program, batch, offering } = s.meta;
+          if (batch !== tab.batch) return false;
+          const offerOk =
+            offering.toLowerCase() === tab.offering.toLowerCase() ||
+            (/flag/i.test(offering) && /flag/i.test(tab.offering));
+          if (!offerOk) return false;
+          const shortProg = program.split(/[\s(]/)[0].toUpperCase();
+          return tab.program.toUpperCase().startsWith(shortProg);
+        });
+        if (!sheetData) return tab;
+
+        const schedMap = {};
+        for (const e of sheetData.timetableEntries) {
+          const key = `${normSubjectName(e.subject)}||${e.section}||${e.startTime}`;
+          if (!schedMap[key])
+            schedMap[key] = { days: [], startTime: e.startTime, endTime: e.endTime, subject: e.subject, section: e.section };
+          const dIdx = DAY_TO_IDX[e.day];
+          if (dIdx !== undefined && !schedMap[key].days.includes(dIdx))
+            schedMap[key].days.push(dIdx);
+        }
+
+        const newRows = tab.rows.map((row) => {
+          const updates = {};
+          const ref = sheetData.facultyMap[normSubjectName(row.subject)];
+          if (ref?.faculty) {
+            const fid = matchFacultyByName(ref.faculty, facultyList);
+            if (fid && !row.facultyId) updates.facultyId = fid;
+          }
+          const rowSec = row.sections[0] || "A";
+          const matched = Object.values(schedMap).filter((e) => {
+            if (normSubjectName(e.subject) !== normSubjectName(row.subject)) return false;
+            return (
+              e.section === "All" ||
+              e.section.replace(/Sec\s*/i, "").trim() === rowSec ||
+              e.section === `Sec ${rowSec}`
+            );
+          });
+          if (matched.length > 0) {
+            const first = matched[0];
+            updates.days      = [...first.days].sort();
+            updates.startTime = first.startTime;
+            updates.endTime   = first.endTime;
+          }
+          return Object.keys(updates).length > 0 ? { ...row, ...updates } : row;
+        });
+
+        return { ...tab, rows: newRows };
+      });
+
+    setTabs(updatedTabs);
+
+    // Auto-select first program+batch with a defined term
+    const firstTab = updatedTabs.find((t) => t.termDefined && t.rows.length > 0);
+    if (firstTab) {
+      setSelectedProgram(firstTab.program);
+      setSelectedBatch(firstTab.batch);
+      setActiveTabId(firstTab.id);
+    }
+
+    setPhase("edit");
   };
 
   if (!open) return null;
@@ -2387,7 +2963,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
             </button>
           </div>
 
-          <div className="drawer-nav">
+          {phase !== "import" && <div className="drawer-nav">
             <div className="drawer-filters">
               <div className="filter-group">
                 <span className="field-label">Program</span>
@@ -2449,10 +3025,18 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 </button>
               )}
             </div>
-          </div>
+          </div>}
 
           <div className="drawer-body">
-            {phase === "done" ? (
+            {phase === "import" ? (
+              <ImportStep
+                onImport={applyImportedData}
+                onSkip={() => setPhase("edit")}
+                tabs={tabs}
+                facultyList={(CAMPUS_DATA.campuses.find((c) => c.id === campusId) || {}).faculty || []}
+                campusName={campusName}
+              />
+            ) : phase === "done" ? (
               <div className="success-wrap">
                 <div className="success-icon"><CheckCircle2 size={40} /></div>
                 <div className="success-title">All classes scheduled</div>
@@ -2500,7 +3084,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
             )}
           </div>
 
-          {phase !== "done" && (() => {
+          {phase !== "done" && phase !== "import" && (() => {
             const activeRows = activeTab && activeTab.termDefined ? activeTab.rows : [];
             const activeTotal = activeRows.length;
             const activeScheduled = activeRows.filter((r) => r.status === "scheduled").length;
@@ -3149,6 +3733,7 @@ function ScheduleTable({
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function App() {
   const [open, setOpen] = useState(false);
+  const [openPhase, setOpenPhase] = useState("import");
   const [campusId, setCampusId] = useState(DEFAULT_CAMPUS_ID);
 
   const selectedCampus = CAMPUS_DATA.campuses.find((c) => c.id === campusId) || CAMPUS_DATA.campuses[0];
@@ -3205,9 +3790,15 @@ function App() {
             </select>
             <button
               className="btn-primary-light demo-rail-cta"
-              onClick={() => setOpen(true)}
+              onClick={() => { setOpenPhase("edit"); setOpen(true); }}
             >
               Start Scheduling <ChevronRight size={16} />
+            </button>
+            <button
+              className="btn-secondary-light demo-rail-import-btn"
+              onClick={() => { setOpenPhase("import"); setOpen(true); }}
+            >
+              <Upload size={16} /> Import Timetable
             </button>
             <div className="demo-rail-note">
               <strong>Term defaults are picked up automatically</strong>
@@ -3286,6 +3877,7 @@ function App() {
         onClose={() => setOpen(false)}
         campusId={campusId}
         campusName={selectedCampus?.full_name || selectedCampus?.name || "Campus"}
+        openPhase={openPhase}
       />
     </div>
   );
