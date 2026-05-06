@@ -70,8 +70,10 @@ const Plus         = makeLucideIcon('Plus');
 const Minus        = makeLucideIcon('Minus');
 const ExternalLink = makeLucideIcon('ExternalLink');
 const ChevronLeft  = makeLucideIcon('ChevronLeft');
-const Upload       = makeLucideIcon('Upload');
-const Download     = makeLucideIcon('Download');
+const Upload           = makeLucideIcon('Upload');
+const Download         = makeLucideIcon('Download');
+const FileSpreadsheet  = makeLucideIcon('FileSpreadsheet');
+const Edit3            = makeLucideIcon('Edit3');
 
 /* ──────────────── BulkSchedule-2.jsx body follows (imports + export stripped) ──────────────── */
 
@@ -426,6 +428,9 @@ const SunstoneStyles = () => (
       flex-direction: column;
       box-shadow: -12px 0 48px rgba(0, 0, 0, 0.14);
       animation: slideIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .drawer--import {
+      width: min(560px, 98vw);
     }
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -1495,6 +1500,144 @@ const SunstoneStyles = () => (
     .import-issue-detail  { color: var(--color-neutral-dark-2); margin-top: 2px; line-height: 16px; }
     .import-issues-header { font-size: 12px; font-weight: 700; color: var(--color-neutral-dark-2);
       text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+
+    /* ── TEMPLATE CONFIG MODAL ───────────────── */
+    .tpl-overlay {
+      position: fixed; inset: 0; background: rgba(12,12,12,0.55);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+      animation: fadeIn 0.15s ease;
+    }
+    .tpl-modal {
+      background: #fff; border-radius: 10px; width: min(560px, 96vw);
+      max-height: 92vh; display: flex; flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    }
+    .tpl-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px 14px; border-bottom: 1px solid var(--color-neutral-dark-5);
+      flex-shrink: 0;
+    }
+    .tpl-modal-title { font-size: 16px; font-weight: 700; color: var(--color-neutral-dark-1); }
+    .tpl-modal-body { padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+    .tpl-modal-footer {
+      padding: 14px 24px; border-top: 1px solid var(--color-neutral-dark-5);
+      display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0;
+    }
+    .tpl-cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .tpl-cfg-field { display: flex; flex-direction: column; gap: 4px; }
+    .tpl-cfg-select {
+      padding: 6px 10px; border: 1px solid var(--color-neutral-dark-5);
+      border-radius: 4px; font-size: 13px; font-family: inherit;
+      color: var(--color-neutral-dark-1); background: #fff; width: 100%;
+    }
+    .tpl-cfg-select:focus { outline: none; border-color: var(--color-primary); }
+    .tpl-section-label {
+      font-size: 11px; font-weight: 700; color: var(--color-neutral-dark-2);
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .tpl-preview { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tpl-preview-slot {
+      padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 500;
+      background: var(--color-primary-3); color: var(--color-primary);
+      border: 1px solid #d0d4ef;
+    }
+    .tpl-preview-slot.is-lunch {
+      background: var(--color-warning-5); color: var(--color-warning-2);
+      border-color: var(--color-warning-3, #f5c36a);
+    }
+    .tpl-per-program-toggle {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; border-radius: 6px;
+      background: var(--color-neutral-dark-6); cursor: pointer; user-select: none;
+    }
+    .tpl-toggle-switch {
+      width: 32px; height: 18px; border-radius: 9px; background: var(--color-neutral-dark-4);
+      position: relative; transition: background 0.2s; flex-shrink: 0;
+    }
+    .tpl-toggle-switch.on { background: var(--color-primary); }
+    .tpl-toggle-knob {
+      position: absolute; top: 2px; left: 2px;
+      width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .tpl-toggle-switch.on .tpl-toggle-knob { transform: translateX(14px); }
+    .tpl-program-list { display: flex; flex-direction: column; gap: 8px; }
+    .tpl-program-item { border: 1px solid var(--color-neutral-dark-5); border-radius: 6px; overflow: hidden; }
+    .tpl-program-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; background: var(--color-neutral-dark-6);
+      cursor: pointer; user-select: none; font-size: 13px; font-weight: 600;
+      color: var(--color-neutral-dark-1);
+    }
+    .tpl-program-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--color-neutral-dark-5); }
+    .tpl-program-item.is-custom { border-color: var(--color-primary-4, #b0b8e8); }
+    .tpl-program-item.is-custom .tpl-program-header { background: var(--color-primary-3); }
+    .tag-neutral { background: var(--color-neutral-dark-6); color: var(--color-neutral-dark-2); border: 1px solid var(--color-neutral-dark-5); }
+    .tpl-slot-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .tpl-slot-table th {
+      text-align: left; padding: 5px 8px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-neutral-dark-2);
+      border-bottom: 1px solid var(--color-neutral-dark-5);
+    }
+    .tpl-slot-table td { padding: 4px 6px; border-bottom: 1px solid var(--color-neutral-dark-6); vertical-align: middle; }
+    .tpl-slot-table tr:last-child td { border-bottom: none; }
+    .tpl-slot-table tr.is-lunch td { background: var(--color-warning-5); }
+    .tpl-slot-label { font-weight: 600; color: var(--color-neutral-dark-1); white-space: nowrap; }
+    .tpl-slot-time-input {
+      padding: 3px 6px; border: 1px solid var(--color-neutral-dark-5); border-radius: 4px;
+      font-size: 12px; font-family: inherit; color: var(--color-neutral-dark-1);
+      background: #fff; width: 90px;
+    }
+    .tpl-slot-time-input:focus { outline: none; border-color: var(--color-primary); }
+
+    /* ── IMPORT MODE SELECTOR ─────────────────── */
+    .import-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .import-mode-card {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 14px; border-radius: 8px; cursor: pointer;
+      border: 2px solid var(--color-neutral-dark-5);
+      background: #fff; transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .import-mode-card:hover { border-color: var(--color-primary-4, #b0b8e8); background: var(--color-primary-3); }
+    .import-mode-card.selected { border-color: var(--color-primary); background: var(--color-primary-3); }
+    .import-mode-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--color-neutral-dark-6);
+    }
+    .import-mode-card.selected .import-mode-icon { background: var(--color-primary); color: #fff; }
+    .import-mode-card:not(.selected) .import-mode-icon { color: var(--color-neutral-dark-2); }
+    .import-mode-title { font-size: 13px; font-weight: 700; color: var(--color-neutral-dark-1); }
+    .import-mode-desc { font-size: 12px; color: var(--color-neutral-dark-2); line-height: 16px; }
+
+    /* ── CONFIRM IMPORT + BULK SCHEDULING ──────── */
+    .confirm-import-wrap { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+    .confirm-program-list { display: flex; flex-direction: column; gap: 6px; }
+    .confirm-program-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-radius: 6px;
+      background: var(--color-neutral-dark-6); font-size: 13px;
+    }
+    .confirm-program-name { font-weight: 600; color: var(--color-neutral-dark-1); }
+    .confirm-program-meta { font-size: 12px; color: var(--color-neutral-dark-2); }
+
+    .bulk-sched-wrap { padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .bulk-sched-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 14px; border-radius: 8px;
+      border: 1px solid var(--color-neutral-dark-5); background: #fff;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .bulk-sched-item.is-scheduling { border-color: var(--color-primary-4, #b0b8e8); background: var(--color-primary-3); }
+    .bulk-sched-item.is-done { border-color: var(--color-success-3, #82c99a); background: var(--color-success-5); }
+    .bulk-sched-item.is-error { border-color: var(--color-error-3, #f5a0a0); background: var(--color-error-5); }
+    .bulk-sched-icon { flex-shrink: 0; margin-top: 1px; }
+    .bulk-sched-body { flex: 1; min-width: 0; }
+    .bulk-sched-name { font-size: 13px; font-weight: 600; color: var(--color-neutral-dark-1); }
+    .bulk-sched-status { font-size: 12px; color: var(--color-neutral-dark-2); margin-top: 2px; }
+    .bulk-sched-error-msg { font-size: 12px; color: var(--color-error-2); margin-top: 4px; }
+    .bulk-sched-actions { display: flex; gap: 6px; margin-top: 8px; }
   `}</style>
 );
 
@@ -1597,24 +1740,28 @@ function parseXlsxTimetable(workbook) {
     const ws = workbook.Sheets[sheetName];
     if (!ws) continue;
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-    if (rows.length < 3) continue;
+    if (rows.length < 4) continue;
 
     let termStart = "", termEnd = "";
     const hdr = String(rows[0]?.[0] || "");
     const dm = hdr.match(/(\d{4}-\d{2}-\d{2})\s*[→\-]\s*(\d{4}-\d{2}-\d{2})/);
     if (dm) { termStart = dm[1]; termEnd = dm[2]; }
 
-    const colHeaders = rows[1] || [];
+    /* Row 1 = slot labels (Slot 1, Slot 2, …, Lunch, …)
+       Row 2 = slot timings (08:30–09:20, …) */
+    const labelRow  = rows[1] || [];
+    const timingRow = rows[2] || [];
     const slotCols = [];
-    for (let c = 2; c < colHeaders.length; c++) {
-      const h = String(colHeaders[c] || "");
-      if (/lunch/i.test(h)) continue;
-      const m = h.match(/(\d{1,2}:\d{2})[–\-](\d{1,2}:\d{2})/);
+    for (let c = 2; c < timingRow.length; c++) {
+      const label = String(labelRow[c] || "");
+      if (/lunch/i.test(label)) continue;
+      const t = String(timingRow[c] || "");
+      const m = t.match(/(\d{1,2}:\d{2})[–\-](\d{1,2}:\d{2})/);
       if (m) slotCols.push({ colIdx: c, startTime: m[1], endTime: m[2] });
     }
 
     let refStart = -1;
-    for (let r = 2; r < rows.length; r++) {
+    for (let r = 3; r < rows.length; r++) {
       const c0 = String(rows[r]?.[0] || "").trim();
       if (c0 === "#" || /Subject Reference/i.test(c0)) { refStart = r; break; }
     }
@@ -1622,7 +1769,7 @@ function parseXlsxTimetable(workbook) {
 
     const timetableEntries = [];
     let curDay = "";
-    for (let r = 2; r < tblEnd; r++) {
+    for (let r = 3; r < tblEnd; r++) {
       const row = rows[r] || [];
       const dayCell = String(row[0] || "").trim().toUpperCase().substring(0, 3);
       const secCell = String(row[1] || "").trim();
@@ -1681,11 +1828,44 @@ function makeSheetName(tab) {
   return raw.substring(0, 31);
 }
 
-function generateTimetableTemplate(tabs, campusName) {
+function addMinutes(t, mins) {
+  const [h, m] = t.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60)).padStart(2,"0")}:${String(total % 60).padStart(2,"0")}`;
+}
+
+function buildSlotsFromConfig(cfg) {
+  const { slotsBeforeLunch, slotsAfterLunch, slotDuration, startTime, lunchDuration } = cfg;
+  const slots = [];
+  let cur = startTime;
+  for (let i = 0; i < slotsBeforeLunch; i++) {
+    const end = addMinutes(cur, slotDuration);
+    slots.push({ label: `Slot ${i + 1}`, start: cur, end });
+    cur = end;
+  }
+  const lunchEnd = addMinutes(cur, lunchDuration);
+  slots.push({ label: "Lunch", start: cur, end: lunchEnd, isLunch: true });
+  cur = lunchEnd;
+  for (let i = 0; i < slotsAfterLunch; i++) {
+    const end = addMinutes(cur, slotDuration);
+    slots.push({ label: `Slot ${slotsBeforeLunch + 1 + i}`, start: cur, end });
+    cur = end;
+  }
+  return slots;
+}
+
+const DEFAULT_TPL_CFG = { slotsBeforeLunch: 5, slotsAfterLunch: 4, slotDuration: 50, startTime: "08:30", lunchDuration: 30, slotsOverride: null };
+
+function getEffectiveSlots(cfg) {
+  return cfg.slotsOverride || buildSlotsFromConfig(cfg);
+}
+
+function generateTimetableTemplate(tabs, campusName, getSlots, facultyList = []) {
   if (typeof XLSX === "undefined") {
     alert("XLSX library is still loading — please try again in a moment.");
     return;
   }
+  const facultyById = new Map(facultyList.map(f => [String(f.id), (f.name || "").trim()]));
   const wb = XLSX.utils.book_new();
   const year = new Date().getFullYear();
   const validTabs = tabs.filter((t) => t.termDefined && t.rows.length > 0);
@@ -1719,8 +1899,10 @@ function generateTimetableTemplate(tabs, campusName) {
     const dateRange = tab.term ? `${tab.term.startDate} → ${tab.term.endDate}` : "";
     const slotMin   = tab.term?.slotMinutes || 60;
 
+    const tabSlots = getSlots ? getSlots(tab) : STANDARD_SLOTS;
     const row0 = [`${tab.program} — Batch ${tab.batch} · ${tab.offering}   |   ${dateRange}   |   Slot = ${slotMin} min`];
-    const row1 = ["Day", "Section", ...STANDARD_SLOTS.map((s) => `${s.label}\n${s.start}–${s.end}`)];
+    const row1 = ["Day", "Section", ...tabSlots.map((s) => s.label)];
+    const row2 = ["", "",           ...tabSlots.map((s) => `${s.start}–${s.end}`)];
 
     /* Timetable grid rows */
     const wDays = (tab.term?.workingDays || [0, 1, 2, 3, 4, 5]).map((i) => DAY_NAMES[i]);
@@ -1729,7 +1911,7 @@ function generateTimetableTemplate(tabs, campusName) {
     const gridRows = [];
     for (const day of wDays) {
       for (let i = 0; i < secLabels.length; i++) {
-        gridRows.push([i === 0 ? day : null, secLabels[i], ...STANDARD_SLOTS.map(() => null)]);
+        gridRows.push([i === 0 ? day : null, secLabels[i], ...tabSlots.map(() => null)]);
       }
     }
 
@@ -1738,14 +1920,16 @@ function generateTimetableTemplate(tabs, campusName) {
     const refRows = [
       [],
       ["  Subject Reference — enter subject names in the timetable grid above"],
-      ["#", "Subject name", "Type", "Faculty", "Section(s)", "Credits (L/P/T)"],
+      ["#", "Subject name", "Type", "Primary Faculty", "Co-Faculty", "Section(s)"],
       ...uniqueSubjs.map((row, i) => {
         const secLabel = tab.rows.filter((r) => r.subjectId === row.subjectId).map((r) => r.sections[0] || "A").join("/");
-        return [i + 1, row.subject, row.isLab ? "Lab" : (row.subjectType === "core" ? "Core" : row.subjectType || "Core"), "", secLabel, ""];
+        const primaryFaculty   = row.facultyId          ? (facultyById.get(String(row.facultyId))          || "") : "";
+        const secondaryFaculty = row.secondaryFacultyId ? (facultyById.get(String(row.secondaryFacultyId)) || "") : "";
+        return [i + 1, row.subject, row.isLab ? "Lab" : (row.subjectType === "core" ? "Core" : row.subjectType || "Core"), primaryFaculty, secondaryFaculty, secLabel];
       }),
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet([row0, row1, ...gridRows, ...refRows]);
+    const ws = XLSX.utils.aoa_to_sheet([row0, row1, row2, ...gridRows, ...refRows]);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   }
 
@@ -1852,12 +2036,18 @@ function validateImportData(parsed, tabs, facultyList) {
 }
 
 function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus" }) {
-  const [dragging, setDragging] = useState(false);
-  const [parsed, setParsed]     = useState(null);
-  const [issues, setIssues]     = useState([]);
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
-  const fileInputRef            = useRef(null);
+  const [importMode, setImportMode] = useState("fresh"); // "fresh" | "modify"
+  const [dragging, setDragging]     = useState(false);
+  const [parsed, setParsed]         = useState(null);
+  const [issues, setIssues]         = useState([]);
+  const [error, setError]           = useState("");
+  const [loading, setLoading]       = useState(false);
+  const fileInputRef                = useRef(null);
+
+  const selectMode = (mode) => {
+    if (mode !== importMode) { setParsed(null); setIssues([]); setError(""); }
+    setImportMode(mode);
+  };
 
   const handleFile = (file) => {
     if (!file) return;
@@ -1890,19 +2080,21 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
 
   return (
     <div className="import-step">
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-        <div>
-          <div className="import-step-title">Step 1 — Import Timetable</div>
-          <div className="import-step-sub">Upload your filled timetable template (.xlsx) to pre-populate faculty, days and time slots across all batches.</div>
+      {/* Mode selector */}
+      <div>
+        <div className="tpl-section-label" style={{ marginBottom: 8 }}>What are you importing?</div>
+        <div className="import-mode-grid">
+          <div className={`import-mode-card${importMode === "fresh" ? " selected" : ""}`} onClick={() => selectMode("fresh")}>
+            <div className="import-mode-icon"><FileSpreadsheet size={18} /></div>
+            <div className="import-mode-title">Fresh Timetable</div>
+            <div className="import-mode-desc">Upload a brand new timetable for your programs — populates all sessions from scratch.</div>
+          </div>
+          <div className={`import-mode-card${importMode === "modify" ? " selected" : ""}`} onClick={() => selectMode("modify")}>
+            <div className="import-mode-icon"><Edit3 size={18} /></div>
+            <div className="import-mode-title">Modify Timetable</div>
+            <div className="import-mode-desc">New entries and time slot changes will be updated program-wise as per the uploaded file.</div>
+          </div>
         </div>
-        <button
-          className="btn-medium btn-secondary-light"
-          style={{ flexShrink: 0, fontSize: 13, padding: "7px 12px", whiteSpace: "nowrap" }}
-          onClick={() => generateTimetableTemplate(tabs, campusName)}
-          title="Download a blank template pre-filled with your campus subjects"
-        >
-          <Download size={14} /> Download Template
-        </button>
       </div>
 
       {!parsed ? (
@@ -1916,12 +2108,11 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }}
             onChange={(e) => handleFile(e.target.files[0])} />
           <div className="import-dropzone-icon">
-            {loading ? <Loader2 size={22} className="spin" /> : <Plus size={22} />}
+            {loading ? <Loader2 size={22} className="spin" /> : <Upload size={22} />}
           </div>
           <div className="import-dropzone-title">
-            {loading ? "Parsing file…" : "Click or drag your timetable .xlsx here"}
+            {loading ? "Parsing file…" : "Click or drag your .xlsx here"}
           </div>
-          <div className="import-dropzone-sub">Sunstone timetable template format supported</div>
           {error && <div style={{ marginTop: 10, color: "var(--color-error-2)", fontSize: 13 }}>{error}</div>}
         </div>
       ) : (
@@ -1990,17 +2181,214 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
 
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button className="btn-medium btn-secondary-light" onClick={() => { setParsed(null); setIssues([]); }}>Re-upload</button>
-            <button className="btn-medium btn-primary-light" onClick={() => onImport(parsed)}>
-              <Check size={14} /> Load into Scheduler
+            <button className="btn-medium btn-primary-light" onClick={() => onImport(parsed, importMode)}>
+              <Play size={14} /> Submit and Start Scheduling
             </button>
           </div>
         </>
       )}
 
-      <hr className="import-step-divider" />
-      <button className="btn-text-14" onClick={onSkip}>
-        Skip — enter manually <ChevronRight size={14} />
-      </button>
+    </div>
+  );
+}
+
+function CfgFields({ cfg, onChange }) {
+  const setGlobal = (k, v) => onChange({ ...cfg, [k]: v, slotsOverride: null });
+  const slots = getEffectiveSlots(cfg);
+  const hasOverride = !!cfg.slotsOverride;
+
+  const editSlot = (idx, field, val) => {
+    const base = cfg.slotsOverride || buildSlotsFromConfig(cfg);
+    const updated = base.map((s, i) => i === idx ? { ...s, [field]: val } : s);
+    onChange({ ...cfg, slotsOverride: updated });
+  };
+
+  return (
+    <>
+      <div className="tpl-cfg-grid">
+        <div className="tpl-cfg-field">
+          <span className="field-label">Day Start Time</span>
+          <input type="time" className="text-input" value={cfg.startTime} onChange={e => setGlobal("startTime", e.target.value)} />
+        </div>
+        <div className="tpl-cfg-field">
+          <span className="field-label">Slot Duration</span>
+          <select className="tpl-cfg-select" value={cfg.slotDuration} onChange={e => setGlobal("slotDuration", Number(e.target.value))}>
+            {[40,45,50,55,60,75,90].map(m => <option key={m} value={m}>{m} min</option>)}
+          </select>
+        </div>
+        <div className="tpl-cfg-field">
+          <span className="field-label">Lunch Duration</span>
+          <select className="tpl-cfg-select" value={cfg.lunchDuration} onChange={e => setGlobal("lunchDuration", Number(e.target.value))}>
+            {[20,25,30,35,40,45,60].map(m => <option key={m} value={m}>{m} min</option>)}
+          </select>
+        </div>
+        <div className="tpl-cfg-field">
+          <span className="field-label">Slots Before Lunch</span>
+          <select className="tpl-cfg-select" value={cfg.slotsBeforeLunch} onChange={e => setGlobal("slotsBeforeLunch", Number(e.target.value))}>
+            {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+        <div className="tpl-cfg-field">
+          <span className="field-label">Slots After Lunch</span>
+          <select className="tpl-cfg-select" value={cfg.slotsAfterLunch} onChange={e => setGlobal("slotsAfterLunch", Number(e.target.value))}>
+            {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span className="tpl-section-label">Slot Timings</span>
+          {hasOverride && (
+            <button
+              className="btn-text-14"
+              style={{ fontSize: 11, color: "var(--color-neutral-dark-2)" }}
+              onClick={() => onChange({ ...cfg, slotsOverride: null })}
+            >
+              Reset to auto
+            </button>
+          )}
+        </div>
+        <table className="tpl-slot-table">
+          <thead>
+            <tr>
+              <th>Slot</th>
+              <th>Start</th>
+              <th>End</th>
+            </tr>
+          </thead>
+          <tbody>
+            {slots.map((s, i) => (
+              <tr key={i} className={s.isLunch ? "is-lunch" : ""}>
+                <td className="tpl-slot-label">{s.label}</td>
+                <td>
+                  <input
+                    type="time"
+                    className="tpl-slot-time-input"
+                    value={s.start}
+                    onChange={e => editSlot(i, "start", e.target.value)}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="time"
+                    className="tpl-slot-time-input"
+                    value={s.end}
+                    onChange={e => editSlot(i, "end", e.target.value)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function TemplateConfigModal({ tabs, campusName, facultyList, onClose }) {
+  const validTabs = tabs.filter(t => t.termDefined && t.rows.length > 0);
+  const [globalCfg, setGlobalCfg] = useState({ ...DEFAULT_TPL_CFG });
+  const [programCfgs, setProgramCfgs] = useState({});
+  const [expanded, setExpanded] = useState({});
+
+  const isCustom = (tabId) => !!programCfgs[tabId];
+  const getProgramCfg = (tabId) => programCfgs[tabId] || { ...globalCfg, slotsOverride: null };
+  const customCount = Object.keys(programCfgs).length;
+
+  const handleDownload = () => {
+    const getSlots = (tab) => getEffectiveSlots(isCustom(tab.id) ? programCfgs[tab.id] : globalCfg);
+    generateTimetableTemplate(tabs, campusName, getSlots, facultyList);
+    onClose();
+  };
+
+  return (
+    <div className="tpl-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="tpl-modal">
+        <div className="tpl-modal-header">
+          <div className="tpl-modal-title">Configure Timetable Template</div>
+          <button className="btn-square-small" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+        <div className="tpl-modal-body">
+
+          {/* Global settings */}
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <div className="tpl-section-label" style={{ marginBottom: 3 }}>Global Settings</div>
+              <div style={{ fontSize: 12, color: "var(--color-neutral-dark-2)" }}>Applies to all programs — override individually below if needed.</div>
+            </div>
+            <CfgFields cfg={globalCfg} onChange={setGlobalCfg} />
+          </div>
+
+          {/* Per-program overrides */}
+          {validTabs.length > 0 && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div>
+                  <div className="tpl-section-label" style={{ marginBottom: 2 }}>Program Overrides</div>
+                  <div style={{ fontSize: 12, color: "var(--color-neutral-dark-2)" }}>
+                    {customCount === 0 ? "All programs use global settings" : `${customCount} program${customCount > 1 ? "s" : ""} with custom settings`}
+                  </div>
+                </div>
+                {customCount > 0 && (
+                  <button className="btn-text-14" style={{ fontSize: 11, color: "var(--color-neutral-dark-2)" }}
+                    onClick={() => setProgramCfgs({})}>
+                    Reset all
+                  </button>
+                )}
+              </div>
+              <div className="tpl-program-list">
+                {validTabs.map(tab => {
+                  const custom = isCustom(tab.id);
+                  const isOpen = !!expanded[tab.id];
+                  const cfg = getProgramCfg(tab.id);
+                  const label = `${tab.program} · ${tab.batch}${tab.offering ? ` — ${tab.offering}` : ""}`;
+                  return (
+                    <div key={tab.id} className={`tpl-program-item${custom ? " is-custom" : ""}`}>
+                      <div className="tpl-program-header" onClick={() => setExpanded(e => ({ ...e, [tab.id]: !e[tab.id] }))}>
+                        <span>{label}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span className={`tag-small ${custom ? "tag-info" : "tag-neutral"}`} style={{ fontSize: 10 }}>
+                            {custom ? "Custom" : "Global"}
+                          </span>
+                          <ChevronRight size={14} style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.2s" }} />
+                        </div>
+                      </div>
+                      {isOpen && (
+                        <div className="tpl-program-body">
+                          {custom && (
+                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                              <button className="btn-text-14" style={{ fontSize: 11, color: "var(--color-neutral-dark-2)" }}
+                                onClick={() => setProgramCfgs(pc => { const n = { ...pc }; delete n[tab.id]; return n; })}>
+                                Reset to global
+                              </button>
+                            </div>
+                          )}
+                          {!custom && (
+                            <div className="alert alert-info" style={{ padding: "7px 12px" }}>
+                              <div className="alert-title" style={{ fontSize: 11 }}>Using global settings — any change here will create a custom override for this program only.</div>
+                            </div>
+                          )}
+                          <CfgFields
+                            cfg={cfg}
+                            onChange={newCfg => setProgramCfgs(pc => ({ ...pc, [tab.id]: newCfg }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="tpl-modal-footer">
+          <button className="btn-medium btn-secondary-light" onClick={onClose}>Cancel</button>
+          <button className="btn-medium btn-primary-light" onClick={handleDownload}>
+            <Download size={14} /> Generate &amp; Download
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2487,7 +2875,13 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
     return first ? first.id : null;
   });
   const [phase, setPhase] = useState("import");
+  const [showTplConfig, setShowTplConfig] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState(null);
+  const [tabSchedulingStatus, setTabSchedulingStatus] = useState({});
   const [processingRowId, setProcessingRowId] = useState(null);
+  const actionResolverRef = useRef(null);
+  const waitForBulkAction = () => new Promise(resolve => { actionResolverRef.current = resolve; });
+  const resolveBulkAction = (action) => { actionResolverRef.current?.(action); actionResolverRef.current = null; };
   const [pausedOnErrorRowId, setPausedOnErrorRowId] = useState(null);
   const cancelRef = useRef(false);
 
@@ -2871,75 +3265,124 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
     }, 300);
   };
 
-  const applyImportedData = (parsed) => {
+  const computeUpdatedTabs = (parsed, baseTabs) => {
     const campus = CAMPUS_DATA.campuses.find((c) => c.id === campusId);
     const facultyList = campus ? campus.faculty : [];
-
-    const updatedTabs = tabs.map((tab) => {
-        if (!tab.termDefined) return tab;
-
-        const sheetData = Object.values(parsed).find((s) => {
-          if (!s.meta) return false;
-          const { program, batch, offering } = s.meta;
-          if (batch !== tab.batch) return false;
-          const offerOk =
-            offering.toLowerCase() === tab.offering.toLowerCase() ||
-            (/flag/i.test(offering) && /flag/i.test(tab.offering));
-          if (!offerOk) return false;
-          const shortProg = program.split(/[\s(]/)[0].toUpperCase();
-          return tab.program.toUpperCase().startsWith(shortProg);
+    return baseTabs.map((tab) => {
+      if (!tab.termDefined) return tab;
+      const sheetData = Object.values(parsed).find((s) => {
+        if (!s.meta) return false;
+        const { program, batch, offering } = s.meta;
+        if (batch !== tab.batch) return false;
+        const offerOk = offering.toLowerCase() === tab.offering.toLowerCase() || (/flag/i.test(offering) && /flag/i.test(tab.offering));
+        if (!offerOk) return false;
+        const shortProg = program.split(/[\s(]/)[0].toUpperCase();
+        return tab.program.toUpperCase().startsWith(shortProg);
+      });
+      if (!sheetData) return tab;
+      const schedMap = {};
+      for (const e of sheetData.timetableEntries) {
+        const key = `${normSubjectName(e.subject)}||${e.section}||${e.startTime}`;
+        if (!schedMap[key]) schedMap[key] = { days: [], startTime: e.startTime, endTime: e.endTime, subject: e.subject, section: e.section };
+        const dIdx = DAY_TO_IDX[e.day];
+        if (dIdx !== undefined && !schedMap[key].days.includes(dIdx)) schedMap[key].days.push(dIdx);
+      }
+      const newRows = tab.rows.map((row) => {
+        const updates = {};
+        const ref = sheetData.facultyMap[normSubjectName(row.subject)];
+        if (ref?.faculty) { const fid = matchFacultyByName(ref.faculty, facultyList); if (fid && !row.facultyId) updates.facultyId = fid; }
+        const rowSec = row.sections[0] || "A";
+        const matched = Object.values(schedMap).filter((e) => {
+          if (normSubjectName(e.subject) !== normSubjectName(row.subject)) return false;
+          return e.section === "All" || e.section.replace(/Sec\s*/i, "").trim() === rowSec || e.section === `Sec ${rowSec}`;
         });
-        if (!sheetData) return tab;
+        if (matched.length > 0) { const first = matched[0]; updates.days = [...first.days].sort(); updates.startTime = first.startTime; updates.endTime = first.endTime; }
+        return Object.keys(updates).length > 0 ? { ...row, ...updates } : row;
+      });
+      return { ...tab, rows: newRows };
+    });
+  };
 
-        const schedMap = {};
-        for (const e of sheetData.timetableEntries) {
-          const key = `${normSubjectName(e.subject)}||${e.section}||${e.startTime}`;
-          if (!schedMap[key])
-            schedMap[key] = { days: [], startTime: e.startTime, endTime: e.endTime, subject: e.subject, section: e.section };
-          const dIdx = DAY_TO_IDX[e.day];
-          if (dIdx !== undefined && !schedMap[key].days.includes(dIdx))
-            schedMap[key].days.push(dIdx);
+  const applyImportedData = (parsed) => {
+    const updatedTabs = computeUpdatedTabs(parsed, tabs);
+    setTabs(updatedTabs);
+    const firstTab = updatedTabs.find((t) => t.termDefined && t.rows.length > 0);
+    if (firstTab) { setSelectedProgram(firstTab.program); setSelectedBatch(firstTab.batch); setActiveTabId(firstTab.id); }
+    setPhase("edit");
+  };
+
+  const handleImport = (parsed, importMode) => {
+    if (importMode === "fresh") {
+      setPendingImportData(parsed);
+      setPhase("confirm-import");
+    } else {
+      applyImportedData(parsed);
+    }
+  };
+
+  const startBulkScheduling = async (updatedTabs) => {
+    const validTabs = updatedTabs.filter(t => t.termDefined && t.rows.length > 0 && t.rows.some(isRowIntended));
+    const initStatus = {};
+    validTabs.forEach(t => { initStatus[t.id] = { status: "pending", scheduled: 0, total: t.rows.filter(isRowIntended).length, error: "" }; });
+    setTabSchedulingStatus(initStatus);
+    setPhase("bulk-scheduling");
+    cancelRef.current = false;
+
+    for (const tab of validTabs) {
+      if (cancelRef.current) break;
+      setTabSchedulingStatus(prev => ({ ...prev, [tab.id]: { ...prev[tab.id], status: "scheduling" } }));
+      setTabs(prev => prev.map(t => t.id !== tab.id ? t : {
+        ...t, rows: t.rows.map(r => isRowIntended(r) ? { ...r, status: "pending", errorMessage: "" } : r)
+      }));
+      await wait(60);
+
+      let retry = false;
+      do {
+        retry = false;
+        const currentTab = tabsRef.current.find(t => t.id === tab.id);
+        const toSchedule = currentTab.rows.filter(r => isRowIntended(r) && r.status !== "scheduled");
+        let scheduledCount = currentTab.rows.filter(r => r.status === "scheduled").length;
+        let hadError = false;
+
+        for (const row of toSchedule) {
+          if (cancelRef.current) return;
+          setProcessingRowId(row.id);
+          updateRowStatus(tab.id, row.id, "processing");
+          await wait(500);
+          const latestTab = tabsRef.current.find(t => t.id === tab.id);
+          const latestRow = latestTab.rows.find(r => r.id === row.id);
+          const conflicts = detectRowConflicts(latestRow, latestTab, tabsRef.current);
+          if (conflicts.length) {
+            const msg = conflicts.map(c => c.message).join(" ");
+            updateRowStatus(tab.id, row.id, "error", msg);
+            setProcessingRowId(null);
+            setTabSchedulingStatus(prev => ({ ...prev, [tab.id]: { ...prev[tab.id], status: "error", error: msg } }));
+            const action = await waitForBulkAction();
+            if (action === "retry") {
+              retry = true;
+              setTabs(prev => prev.map(t => t.id !== tab.id ? t : {
+                ...t, rows: t.rows.map(r => r.status === "error" ? { ...r, status: "pending", errorMessage: "" } : r)
+              }));
+              await wait(60);
+            }
+            hadError = true;
+            break;
+          }
+          updateRowStatus(tab.id, row.id, "scheduled");
+          scheduledCount++;
+          setTabSchedulingStatus(prev => ({ ...prev, [tab.id]: { ...prev[tab.id], scheduled: scheduledCount } }));
+          await wait(160);
         }
 
-        const newRows = tab.rows.map((row) => {
-          const updates = {};
-          const ref = sheetData.facultyMap[normSubjectName(row.subject)];
-          if (ref?.faculty) {
-            const fid = matchFacultyByName(ref.faculty, facultyList);
-            if (fid && !row.facultyId) updates.facultyId = fid;
-          }
-          const rowSec = row.sections[0] || "A";
-          const matched = Object.values(schedMap).filter((e) => {
-            if (normSubjectName(e.subject) !== normSubjectName(row.subject)) return false;
-            return (
-              e.section === "All" ||
-              e.section.replace(/Sec\s*/i, "").trim() === rowSec ||
-              e.section === `Sec ${rowSec}`
-            );
-          });
-          if (matched.length > 0) {
-            const first = matched[0];
-            updates.days      = [...first.days].sort();
-            updates.startTime = first.startTime;
-            updates.endTime   = first.endTime;
-          }
-          return Object.keys(updates).length > 0 ? { ...row, ...updates } : row;
-        });
-
-        return { ...tab, rows: newRows };
-      });
-
-    setTabs(updatedTabs);
-
-    // Auto-select first program+batch with a defined term
-    const firstTab = updatedTabs.find((t) => t.termDefined && t.rows.length > 0);
-    if (firstTab) {
-      setSelectedProgram(firstTab.program);
-      setSelectedBatch(firstTab.batch);
-      setActiveTabId(firstTab.id);
+        if (!hadError) {
+          const total = tabsRef.current.find(t => t.id === tab.id).rows.filter(isRowIntended).length;
+          setTabSchedulingStatus(prev => ({ ...prev, [tab.id]: { ...prev[tab.id], status: "done", scheduled: total } }));
+        }
+      } while (retry);
     }
 
-    setPhase("edit");
+    setProcessingRowId(null);
+    setPhase("done");
   };
 
   if (!open) return null;
@@ -2949,13 +3392,28 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
       <SunstoneStyles />
       <style>{`.spin { animation: sunspin 0.9s linear infinite; } @keyframes sunspin { to { transform: rotate(360deg); } }`}</style>
       <div className="sun-root">
+        {showTplConfig && (
+          <TemplateConfigModal tabs={tabs} campusName={campusName} facultyList={(CAMPUS_DATA.campuses.find(c => c.id === campusId) || {}).faculty || []} onClose={() => setShowTplConfig(false)} />
+        )}
         <div className="drawer-backdrop" onClick={phase === "submitting" ? undefined : onClose} />
-        <aside className="drawer" role="dialog" aria-modal="true" aria-label="Bulk Schedule">
+        <aside className={`drawer${["import","confirm-import","bulk-scheduling"].includes(phase) ? " drawer--import" : ""}`} role="dialog" aria-modal="true" aria-label="Bulk Schedule">
           <div className="drawer-header">
             <div className="drawer-title-block">
-              <div className="drawer-title">Bulk Schedule</div>
+              <div className="drawer-title">
+                {phase === "import" ? "Import Timetable"
+                  : phase === "confirm-import" ? "Review & Confirm"
+                  : phase === "bulk-scheduling" ? "Scheduling Timetable"
+                  : "Bulk Schedule"}
+              </div>
               <div className="drawer-subtitle">
-                Plan recurring classes for every program × batch in <strong style={{ color: "var(--color-neutral-dark-1)" }}>{campusName}</strong> for the upcoming semester.
+                {phase === "import"
+                  ? <>Upload your campus timetable or apply changes — use an <strong style={{ color: "var(--color-neutral-dark-1)" }}>.xlsx</strong> file for <strong style={{ color: "var(--color-neutral-dark-1)" }}>{campusName}</strong>.</>
+                  : phase === "confirm-import"
+                  ? <>Review the parsed entries below before scheduling begins for <strong style={{ color: "var(--color-neutral-dark-1)" }}>{campusName}</strong>.</>
+                  : phase === "bulk-scheduling"
+                  ? <>Scheduling programs one by one for <strong style={{ color: "var(--color-neutral-dark-1)" }}>{campusName}</strong>.</>
+                  : <>Plan recurring classes for every program × batch in <strong style={{ color: "var(--color-neutral-dark-1)" }}>{campusName}</strong> for the upcoming semester.</>
+                }
               </div>
             </div>
             <button className="btn-square-small" onClick={onClose} aria-label="Close">
@@ -2963,7 +3421,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
             </button>
           </div>
 
-          {phase !== "import" && <div className="drawer-nav">
+          {!["import","confirm-import","bulk-scheduling"].includes(phase) && <div className="drawer-nav">
             <div className="drawer-filters">
               <div className="filter-group">
                 <span className="field-label">Program</span>
@@ -3030,13 +3488,99 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
           <div className="drawer-body">
             {phase === "import" ? (
               <ImportStep
-                onImport={applyImportedData}
+                onImport={handleImport}
                 onSkip={() => setPhase("edit")}
                 tabs={tabs}
                 facultyList={(CAMPUS_DATA.campuses.find((c) => c.id === campusId) || {}).faculty || []}
                 campusName={campusName}
               />
-            ) : phase === "done" ? (
+            ) : phase === "confirm-import" ? (() => {
+              const validTabs = computeUpdatedTabs(pendingImportData, tabs).filter(t => t.termDefined && t.rows.length > 0 && t.rows.some(isRowIntended));
+              const totalEntries = validTabs.reduce((s, t) => s + t.rows.filter(isRowIntended).length, 0);
+              return (
+                <div className="confirm-import-wrap">
+                  <div className="alert alert-warning" style={{ padding: "10px 14px" }}>
+                    <div className="alert-title">Existing scheduled events will be overridden</div>
+                    <div className="alert-description" style={{ marginTop: 3 }}>If any events are already scheduled for these programs, they will be replaced with the new entries from this file.</div>
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div className="tpl-section-label">Programs to be scheduled</div>
+                      {totalEntries > 0 && <div style={{ fontSize: 12, color: "var(--color-neutral-dark-2)" }}>{totalEntries} total entries</div>}
+                    </div>
+                    <div className="confirm-program-list">
+                      {validTabs.map(tab => {
+                        const intended = tab.rows.filter(isRowIntended);
+                        return (
+                          <div key={tab.id} className="confirm-program-row">
+                            <div>
+                              <div className="confirm-program-name">{tab.program} · {tab.batch}{tab.offering ? ` — ${tab.offering}` : ""}</div>
+                              <div className="confirm-program-meta">{tab.rows.length} subjects · {intended.length} entries</div>
+                            </div>
+                            <span className="tag-small tag-info" style={{ fontSize: 11 }}>{intended.length} entries</span>
+                          </div>
+                        );
+                      })}
+                      {validTabs.length === 0 && (
+                        <div className="alert alert-warning"><div className="alert-title">No schedulable entries found in the uploaded file.</div></div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "space-between", marginTop: 4 }}>
+                    <button className="btn-medium btn-secondary-light" onClick={() => setPhase("import")}>
+                      <ChevronLeft size={14} /> Back
+                    </button>
+                    <button className="btn-medium btn-primary-light" disabled={validTabs.length === 0}
+                      onClick={() => {
+                        const updated = computeUpdatedTabs(pendingImportData, tabs);
+                        setTabs(updated);
+                        tabsRef.current = updated;
+                        startBulkScheduling(updated);
+                      }}>
+                      <Check size={14} /> Confirm and Submit
+                    </button>
+                  </div>
+                </div>
+              );
+            })() : phase === "bulk-scheduling" ? (() => {
+              const validTabs = tabs.filter(t => t.termDefined && t.rows.length > 0 && t.rows.some(isRowIntended));
+              return (
+                <div className="bulk-sched-wrap">
+                  {validTabs.map(tab => {
+                    const st = tabSchedulingStatus[tab.id] || { status: "pending", scheduled: 0, total: tab.rows.filter(isRowIntended).length };
+                    const isScheduling = st.status === "scheduling";
+                    const isDone = st.status === "done";
+                    const isError = st.status === "error";
+                    return (
+                      <div key={tab.id} className={`bulk-sched-item${isScheduling ? " is-scheduling" : isDone ? " is-done" : isError ? " is-error" : ""}`}>
+                        <div className="bulk-sched-icon">
+                          {isDone   && <CheckCircle2 size={18} color="var(--color-success-2)" />}
+                          {isError  && <AlertCircle  size={18} color="var(--color-error-2)" />}
+                          {isScheduling && <Loader2 size={18} color="var(--color-primary)" className="spin" />}
+                          {st.status === "pending" && <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid var(--color-neutral-dark-4)", boxSizing: "border-box" }} />}
+                        </div>
+                        <div className="bulk-sched-body">
+                          <div className="bulk-sched-name">{tab.program} · {tab.batch}{tab.offering ? ` — ${tab.offering}` : ""}</div>
+                          <div className="bulk-sched-status">
+                            {isDone      && `Scheduled — ${st.scheduled} events`}
+                            {isScheduling && `Scheduling… ${st.scheduled} / ${st.total}`}
+                            {isError     && "Paused — error encountered"}
+                            {st.status === "pending" && "Waiting…"}
+                          </div>
+                          {isError && <>
+                            <div className="bulk-sched-error-msg">{st.error}</div>
+                            <div className="bulk-sched-actions">
+                              <button className="btn-medium btn-secondary-light" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => resolveBulkAction("skip")}>Skip program</button>
+                              <button className="btn-medium btn-primary-light"   style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => resolveBulkAction("retry")}>Retry</button>
+                            </div>
+                          </>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })() : phase === "done" ? (
               <div className="success-wrap">
                 <div className="success-icon"><CheckCircle2 size={40} /></div>
                 <div className="success-title">All classes scheduled</div>
@@ -3084,7 +3628,23 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
             )}
           </div>
 
-          {phase !== "done" && phase !== "import" && (() => {
+          {["import","confirm-import"].includes(phase) && (
+            <div className="drawer-footer" style={{ justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-neutral-dark-1)" }}>Download Timetable Template</div>
+                <div style={{ fontSize: 12, color: "var(--color-neutral-dark-2)", marginTop: 2 }}>Pre-filled with all subjects — configure your time slots before downloading</div>
+              </div>
+              <button
+                className="btn-medium btn-secondary-light"
+                style={{ flexShrink: 0 }}
+                onClick={() => setShowTplConfig(true)}
+              >
+                <Download size={14} /> Download
+              </button>
+            </div>
+          )}
+
+          {!["done","import","confirm-import","bulk-scheduling"].includes(phase) && (() => {
             const activeRows = activeTab && activeTab.termDefined ? activeTab.rows : [];
             const activeTotal = activeRows.length;
             const activeScheduled = activeRows.filter((r) => r.status === "scheduled").length;
