@@ -1501,6 +1501,29 @@ const SunstoneStyles = () => (
     .import-issues-header { font-size: 12px; font-weight: 700; color: var(--color-neutral-dark-2);
       text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 
+    /* ── MODIFY DIFF VIEW ─────────────────────── */
+    .diff-batch-wrap { display: flex; flex-direction: column; gap: 6px; }
+    .diff-batch-item { border: 1px solid var(--color-neutral-dark-5); border-radius: 6px; overflow: hidden; }
+    .diff-batch-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; background: var(--color-neutral-dark-6);
+      cursor: pointer; user-select: none;
+    }
+    .diff-batch-body { border-top: 1px solid var(--color-neutral-dark-5); overflow-x: auto; }
+    .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .diff-table th {
+      text-align: left; padding: 6px 10px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-neutral-dark-2);
+      border-bottom: 1px solid var(--color-neutral-dark-5); white-space: nowrap;
+    }
+    .diff-table td { padding: 7px 10px; border-bottom: 1px solid var(--color-neutral-dark-6); vertical-align: middle; }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .diff-row-new td { background: #f0faf3; }
+    .diff-subject { font-weight: 600; color: var(--color-neutral-dark-1); max-width: 140px; }
+    .diff-sec { color: var(--color-neutral-dark-2); white-space: nowrap; }
+    .diff-old { color: var(--color-neutral-dark-3); text-decoration: line-through; white-space: nowrap; }
+    .diff-new { color: var(--color-success-2); font-weight: 600; white-space: nowrap; }
+
     /* ── TEMPLATE CONFIG MODAL ───────────────── */
     .tpl-overlay {
       position: fixed; inset: 0; background: rgba(12,12,12,0.55);
@@ -2035,17 +2058,177 @@ function validateImportData(parsed, tabs, facultyList) {
   return issues.sort((a, b) => (a.type === "error" ? -1 : 1) - (b.type === "error" ? -1 : 1));
 }
 
+function computeModifyDiff(parsed, tabs) {
+  const results = [];
+  for (const tab of tabs) {
+    if (!tab.termDefined || tab.rows.length === 0) continue;
+    const sheetData = Object.values(parsed).find(s => {
+      if (!s.meta) return false;
+      const { program, batch, offering } = s.meta;
+      if (batch !== tab.batch) return false;
+      const offerOk = offering.toLowerCase() === tab.offering.toLowerCase() || (/flag/i.test(offering) && /flag/i.test(tab.offering));
+      if (!offerOk) return false;
+      return tab.program.toUpperCase().startsWith(program.split(/[\s(]/)[0].toUpperCase());
+    });
+    if (!sheetData) continue;
+
+    // Build new schedule map aggregated by subject+section
+    const rawMap = {};
+    for (const e of sheetData.timetableEntries) {
+      const key = `${normSubjectName(e.subject)}||${e.section}||${e.startTime}`;
+      if (!rawMap[key]) rawMap[key] = { days: [], startTime: e.startTime, endTime: e.endTime, subject: e.subject, section: e.section };
+      const dIdx = DAY_TO_IDX[e.day];
+      if (dIdx !== undefined && !rawMap[key].days.includes(dIdx)) rawMap[key].days.push(dIdx);
+    }
+    // Index by subjectNorm||sectionVariant for fast lookup
+    const newByKey = {};
+    for (const entry of Object.values(rawMap)) {
+      const secRaw = entry.section;
+      const secStripped = secRaw.replace(/^Sec\s*/i, "").trim();
+      for (const sv of [secRaw.toLowerCase(), secStripped.toLowerCase(), "all"]) {
+        const k = `${normSubjectName(entry.subject)}||${sv}`;
+        if (!newByKey[k]) newByKey[k] = { ...entry, days: [...entry.days].sort() };
+      }
+    }
+
+    const changes = [];
+    for (const row of tab.rows) {
+      const sec = row.sections[0] || "A";
+      let newEntry = null;
+      for (const sv of [sec.toLowerCase(), `sec ${sec.toLowerCase()}`, "all"]) {
+        const k = `${normSubjectName(row.subject)}||${sv}`;
+        if (newByKey[k]) { newEntry = newByKey[k]; break; }
+      }
+      if (!newEntry) continue;
+
+      const hasOld = !!(row.startTime || (row.days && row.days.length > 0));
+      const oldDaysStr = (row.days || []).slice().sort().join(",");
+      const newDaysStr = (newEntry.days || []).sort().join(",");
+      const timeChanged = row.startTime !== newEntry.startTime || row.endTime !== newEntry.endTime;
+      const daysChanged = oldDaysStr !== newDaysStr;
+      const isNew = !hasOld;
+
+      if (!isNew && !timeChanged && !daysChanged) continue;
+
+      changes.push({
+        subject: row.subject,
+        section: sec,
+        type: isNew ? "new" : "modified",
+        old: hasOld ? { days: row.days || [], startTime: row.startTime, endTime: row.endTime } : null,
+        next: { days: newEntry.days || [], startTime: newEntry.startTime, endTime: newEntry.endTime },
+      });
+    }
+
+    if (changes.length > 0) {
+      results.push({
+        tab,
+        changes,
+        modifiedCount: changes.filter(c => c.type === "modified").length,
+        newCount:      changes.filter(c => c.type === "new").length,
+      });
+    }
+  }
+  return results;
+}
+
+function ModifyDiffView({ parsed, tabs }) {
+  const diffs = React.useMemo(() => computeModifyDiff(parsed, tabs), [parsed]);
+  const [expanded, setExpanded] = React.useState(() =>
+    diffs.length === 1 ? { [diffs[0].tab.id]: true } : {}
+  );
+
+  if (diffs.length === 0) return (
+    <div className="alert alert-info" style={{ padding: "8px 14px" }}>
+      <div className="alert-title" style={{ fontSize: 12 }}>No changes detected — uploaded timetable matches the current schedule.</div>
+    </div>
+  );
+
+  const totalChanges = diffs.reduce((s, d) => s + d.changes.length, 0);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+        <span className="tpl-section-label">Changes Preview</span>
+        <span style={{ fontSize: 12, color: "var(--color-neutral-dark-2)" }}>
+          {totalChanges} change{totalChanges !== 1 ? "s" : ""} across {diffs.length} batch{diffs.length !== 1 ? "es" : ""}
+        </span>
+      </div>
+      <div className="diff-batch-wrap">
+        {diffs.map(({ tab, changes, modifiedCount, newCount }) => {
+          const isOpen = !!expanded[tab.id];
+          const label = `${tab.program} · ${tab.batch}${tab.offering ? ` — ${tab.offering}` : ""}`;
+          return (
+            <div key={tab.id} className="diff-batch-item">
+              <div className="diff-batch-header" onClick={() => setExpanded(e => ({ ...e, [tab.id]: !e[tab.id] }))}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-neutral-dark-1)" }}>{label}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {modifiedCount > 0 && <span className="tag-small tag-warning" style={{ fontSize: 10 }}>{modifiedCount} modified</span>}
+                  {newCount > 0      && <span className="tag-small tag-success" style={{ fontSize: 10 }}>{newCount} new</span>}
+                  <ChevronRight size={14} style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.2s" }} />
+                </div>
+              </div>
+              {isOpen && (
+                <div className="diff-batch-body">
+                  <table className="diff-table">
+                    <thead>
+                      <tr><th>Subject</th><th>Sec</th><th>Change</th><th>Before</th><th>After</th></tr>
+                    </thead>
+                    <tbody>
+                      {changes.map((c, i) => (
+                        <tr key={i} className={`diff-row-${c.type}`}>
+                          <td className="diff-subject">{c.subject}</td>
+                          <td className="diff-sec">{c.section}</td>
+                          <td>
+                            <span className={`tag-small ${c.type === "new" ? "tag-success" : "tag-warning"}`} style={{ fontSize: 10 }}>
+                              {c.type === "new" ? "New" : "Modified"}
+                            </span>
+                          </td>
+                          <td className="diff-old">
+                            {c.old ? (
+                              <>
+                                <div>{c.old.startTime}–{c.old.endTime}</div>
+                                {c.old.days.length > 0 && <div style={{ fontSize: 11 }}>{c.old.days.map(d => DAY_LABELS[d]?.slice(0,3) || "").join(", ")}</div>}
+                              </>
+                            ) : "—"}
+                          </td>
+                          <td className="diff-new">
+                            <div>{c.next.startTime}–{c.next.endTime}</div>
+                            {c.next.days.length > 0 && <div style={{ fontSize: 11 }}>{c.next.days.map(d => DAY_LABELS[d]?.slice(0,3) || "").join(", ")}</div>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function tomorrow() {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus" }) {
-  const [importMode, setImportMode] = useState("fresh"); // "fresh" | "modify"
-  const [dragging, setDragging]     = useState(false);
-  const [parsed, setParsed]         = useState(null);
-  const [issues, setIssues]         = useState([]);
-  const [error, setError]           = useState("");
-  const [loading, setLoading]       = useState(false);
-  const fileInputRef                = useRef(null);
+  const [importMode, setImportMode]       = useState("fresh"); // "fresh" | "modify"
+  const [dragging, setDragging]           = useState(false);
+  const [parsed, setParsed]               = useState(null);
+  const [issues, setIssues]               = useState([]);
+  const [error, setError]                 = useState("");
+  const [loading, setLoading]             = useState(false);
+  const [effectiveDateType, setEffectiveDateType] = useState("tomorrow"); // "tomorrow" | "custom"
+  const [customDate, setCustomDate]       = useState(tomorrow());
+  const fileInputRef                      = useRef(null);
+
+  const effectiveDate = effectiveDateType === "tomorrow" ? tomorrow() : customDate;
 
   const selectMode = (mode) => {
-    if (mode !== importMode) { setParsed(null); setIssues([]); setError(""); }
+    if (mode !== importMode) { setParsed(null); setIssues([]); setError(""); setEffectiveDateType("tomorrow"); setCustomDate(tomorrow()); }
     setImportMode(mode);
   };
 
@@ -2179,9 +2362,40 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
             </div>
           )}
 
+          {importMode === "modify" && (
+            <ModifyDiffView parsed={parsed} tabs={tabs} />
+          )}
+
+          {importMode === "modify" && (
+            <div style={{ background: "#f8f9fa", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 14px", marginTop: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Effective from</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                  <input type="radio" name="effectiveDateType" value="tomorrow"
+                    checked={effectiveDateType === "tomorrow"}
+                    onChange={() => setEffectiveDateType("tomorrow")}
+                    style={{ accentColor: "#4f46e5" }} />
+                  <span>Tomorrow <span style={{ color: "#6b7280", fontSize: 12 }}>({tomorrow()})</span></span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                  <input type="radio" name="effectiveDateType" value="custom"
+                    checked={effectiveDateType === "custom"}
+                    onChange={() => setEffectiveDateType("custom")}
+                    style={{ accentColor: "#4f46e5" }} />
+                  <span>Choose a date</span>
+                  {effectiveDateType === "custom" && (
+                    <input type="date" value={customDate} min={tomorrow()}
+                      onChange={e => setCustomDate(e.target.value)}
+                      style={{ fontSize: 12, padding: "3px 8px", border: "1px solid #d1d5db", borderRadius: 6, color: "#1f2937" }} />
+                  )}
+                </label>
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button className="btn-medium btn-secondary-light" onClick={() => { setParsed(null); setIssues([]); }}>Re-upload</button>
-            <button className="btn-medium btn-primary-light" onClick={() => onImport(parsed, importMode)}>
+            <button className="btn-medium btn-primary-light" onClick={() => onImport(parsed, importMode, effectiveDate)}>
               <Play size={14} /> Submit and Start Scheduling
             </button>
           </div>
@@ -3311,12 +3525,15 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
     setPhase("edit");
   };
 
-  const handleImport = (parsed, importMode) => {
+  const handleImport = (parsed, importMode, effectiveDate) => {
     if (importMode === "fresh") {
       setPendingImportData(parsed);
       setPhase("confirm-import");
     } else {
       applyImportedData(parsed);
+      if (effectiveDate) {
+        console.info("[TimetableImport] Modify effective from:", effectiveDate);
+      }
     }
   };
 
