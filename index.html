@@ -2214,7 +2214,7 @@ function tomorrow() {
   return d.toISOString().slice(0, 10);
 }
 
-function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus" }) {
+function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus", onParsedChange, onModeChange, onEffectiveDateChange }) {
   const [importMode, setImportMode]       = useState("fresh"); // "fresh" | "modify"
   const [dragging, setDragging]           = useState(false);
   const [parsed, setParsed]               = useState(null);
@@ -2226,6 +2226,10 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
   const fileInputRef                      = useRef(null);
 
   const effectiveDate = effectiveDateType === "tomorrow" ? tomorrow() : customDate;
+
+  useEffect(() => { onParsedChange?.(parsed); }, [parsed]);
+  useEffect(() => { onModeChange?.(importMode); }, [importMode]);
+  useEffect(() => { onEffectiveDateChange?.(effectiveDate); }, [effectiveDate]);
 
   const selectMode = (mode) => {
     if (mode !== importMode) { setParsed(null); setIssues([]); setError(""); setEffectiveDateType("tomorrow"); setCustomDate(tomorrow()); }
@@ -2392,13 +2396,6 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
           {importMode === "modify" && (
             <ModifyDiffView parsed={parsed} tabs={tabs} />
           )}
-
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button className="btn-medium btn-secondary-light" onClick={() => { setParsed(null); setIssues([]); }}>Re-upload</button>
-            <button className="btn-medium btn-primary-light" onClick={() => onImport(parsed, importMode, effectiveDate)}>
-              <Play size={14} /> Submit and Start Scheduling
-            </button>
-          </div>
         </>
       )}
 
@@ -3091,6 +3088,10 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   const [phase, setPhase] = useState("import");
   const [showTplConfig, setShowTplConfig] = useState(false);
   const [pendingImportData, setPendingImportData] = useState(null);
+  const [importParsed, setImportParsed] = useState(null);
+  const [importModeState, setImportModeState] = useState("fresh");
+  const [importEffectiveDate, setImportEffectiveDate] = useState(null);
+  const [importResetKey, setImportResetKey] = useState(0);
   const [tabSchedulingStatus, setTabSchedulingStatus] = useState({});
   const [processingRowId, setProcessingRowId] = useState(null);
   const actionResolverRef = useRef(null);
@@ -3705,11 +3706,15 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
           <div className="drawer-body">
             {phase === "import" ? (
               <ImportStep
+                key={importResetKey}
                 onImport={handleImport}
                 onSkip={() => setPhase("edit")}
                 tabs={tabs}
                 facultyList={(CAMPUS_DATA.campuses.find((c) => c.id === campusId) || {}).faculty || []}
                 campusName={campusName}
+                onParsedChange={setImportParsed}
+                onModeChange={setImportModeState}
+                onEffectiveDateChange={setImportEffectiveDate}
               />
             ) : phase === "confirm-import" ? (() => {
               const validTabs = computeUpdatedTabs(pendingImportData, tabs).filter(t => t.termDefined && t.rows.length > 0 && t.rows.some(isRowIntended));
@@ -3845,7 +3850,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
             )}
           </div>
 
-          {["import","confirm-import"].includes(phase) && (
+          {["import","confirm-import"].includes(phase) && !importParsed && (
             <div className="drawer-footer" style={{ justifyContent: "space-between" }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-neutral-dark-1)" }}>Download Timetable Template</div>
@@ -3857,6 +3862,15 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 onClick={() => setShowTplConfig(true)}
               >
                 <Download size={14} /> Download
+              </button>
+            </div>
+          )}
+
+          {phase === "import" && importParsed && (
+            <div className="drawer-footer" style={{ justifyContent: "flex-end", gap: 8 }}>
+              <button className="btn-medium btn-secondary-light" onClick={() => { setImportParsed(null); setImportResetKey(k => k + 1); }}>Re-upload</button>
+              <button className="btn-medium btn-primary-light" onClick={() => handleImport(importParsed, importModeState, importEffectiveDate)}>
+                <Play size={14} /> Submit and Start Scheduling
               </button>
             </div>
           )}
