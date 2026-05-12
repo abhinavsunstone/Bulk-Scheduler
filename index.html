@@ -2378,36 +2378,6 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
             </div>
           )}
 
-          {importMode === "modify" && (
-            <div style={{ background: "#f8f9fa", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 14px" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Effective from</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
-                  <input type="radio" name="effectiveDateType" value="tomorrow"
-                    checked={effectiveDateType === "tomorrow"}
-                    onChange={() => setEffectiveDateType("tomorrow")}
-                    style={{ accentColor: "#4f46e5" }} />
-                  <span>Tomorrow <span style={{ color: "#6b7280", fontSize: 12 }}>({tomorrow()})</span></span>
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
-                  <input type="radio" name="effectiveDateType" value="custom"
-                    checked={effectiveDateType === "custom"}
-                    onChange={() => setEffectiveDateType("custom")}
-                    style={{ accentColor: "#4f46e5" }} />
-                  <span>Choose a date</span>
-                  {effectiveDateType === "custom" && (
-                    <input type="date" value={customDate} min={tomorrow()}
-                      onChange={e => setCustomDate(e.target.value)}
-                      style={{ fontSize: 12, padding: "3px 8px", border: "1px solid #d1d5db", borderRadius: 6, color: "#1f2937" }} />
-                  )}
-                </label>
-              </div>
-            </div>
-          )}
-
-          {importMode === "modify" && (
-            <ModifyDiffView parsed={parsed} tabs={tabs} />
-          )}
         </>
       )}
 
@@ -3103,6 +3073,8 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   const [importParsed, setImportParsed] = useState(null);
   const [importModeState, setImportModeState] = useState("fresh");
   const [importEffectiveDate, setImportEffectiveDate] = useState(null);
+  const [pendingImportMode, setPendingImportMode] = useState("fresh");
+  const [pendingEffectiveDate, setPendingEffectiveDate] = useState(null);
   const [importResetKey, setImportResetKey] = useState(0);
   const [tabSchedulingStatus, setTabSchedulingStatus] = useState({});
   const [processingRowId, setProcessingRowId] = useState(null);
@@ -3541,15 +3513,10 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   };
 
   const handleImport = (parsed, importMode, effectiveDate) => {
-    if (importMode === "fresh") {
-      setPendingImportData(parsed);
-      setPhase("confirm-import");
-    } else {
-      applyImportedData(parsed);
-      if (effectiveDate) {
-        console.info("[TimetableImport] Modify effective from:", effectiveDate);
-      }
-    }
+    setPendingImportData(parsed);
+    setPendingImportMode(importMode);
+    setPendingEffectiveDate(effectiveDate || null);
+    setPhase("confirm-import");
   };
 
   const startBulkScheduling = async (updatedTabs) => {
@@ -3635,7 +3602,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
               <div className="drawer-title">
                 {phase === "import" ? "Import Timetable"
                   : phase === "confirm-import" ? "Review & Confirm"
-                  : phase === "bulk-scheduling" ? "Scheduling Timetable"
+                  : phase === "bulk-scheduling" ? (pendingImportMode === "modify" ? "Applying Timetable Changes" : "Scheduling Timetable")
                   : "Bulk Schedule"}
               </div>
               <div className="drawer-subtitle">
@@ -3733,17 +3700,56 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 onDownloadTemplate={() => setShowTplConfig(true)}
               />
             ) : phase === "confirm-import" ? (() => {
+              const isModify = pendingImportMode === "modify";
               const validTabs = computeUpdatedTabs(pendingImportData, tabs).filter(t => t.termDefined && t.rows.length > 0 && t.rows.some(isRowIntended));
               const totalEntries = validTabs.reduce((s, t) => s + t.rows.filter(isRowIntended).length, 0);
               return (
                 <div className="confirm-import-wrap">
                   <div className="alert alert-warning" style={{ padding: "10px 14px" }}>
-                    <div className="alert-title">Existing scheduled events will be overridden</div>
-                    <div className="alert-description" style={{ marginTop: 3 }}>If any events are already scheduled for these programs, they will be replaced with the new entries from this file.</div>
+                    <div className="alert-title">
+                      {isModify ? "Existing scheduled events will be overridden with these changes" : "Existing scheduled events will be overridden"}
+                    </div>
+                    <div className="alert-description" style={{ marginTop: 3 }}>
+                      {isModify
+                        ? `Changes will apply from ${pendingEffectiveDate || "tomorrow"}. Affected slots will be replaced program-wise as per the uploaded file.`
+                        : "If any events are already scheduled for these programs, they will be replaced with the new entries from this file."}
+                    </div>
                   </div>
+
+                  {isModify && pendingImportData && (
+                    <ModifyDiffView parsed={pendingImportData} tabs={tabs} />
+                  )}
+
+                  {isModify && (
+                    <div style={{ background: "#f8f9fa", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Effective from</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                          <input type="radio" name="confirmEffDate" value="tomorrow"
+                            checked={!pendingEffectiveDate || pendingEffectiveDate === tomorrow()}
+                            onChange={() => setPendingEffectiveDate(tomorrow())}
+                            style={{ accentColor: "#4f46e5" }} />
+                          <span>Tomorrow <span style={{ color: "#6b7280", fontSize: 12 }}>({tomorrow()})</span></span>
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                          <input type="radio" name="confirmEffDate" value="custom"
+                            checked={!!pendingEffectiveDate && pendingEffectiveDate !== tomorrow()}
+                            onChange={() => setPendingEffectiveDate(tomorrow())}
+                            style={{ accentColor: "#4f46e5" }} />
+                          <span>Choose a date</span>
+                          {!!pendingEffectiveDate && pendingEffectiveDate !== tomorrow() && (
+                            <input type="date" value={pendingEffectiveDate} min={tomorrow()}
+                              onChange={e => setPendingEffectiveDate(e.target.value)}
+                              style={{ fontSize: 12, padding: "3px 8px", border: "1px solid #d1d5db", borderRadius: 6, color: "#1f2937" }} />
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div className="tpl-section-label">Programs to be scheduled</div>
+                      <div className="tpl-section-label">{isModify ? "Programs to be updated" : "Programs to be scheduled"}</div>
                       {totalEntries > 0 && <div style={{ fontSize: 12, color: "var(--color-neutral-dark-2)" }}>{totalEntries} total entries</div>}
                     </div>
                     <div className="confirm-program-list">
@@ -3775,7 +3781,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                         tabsRef.current = updated;
                         startBulkScheduling(updated);
                       }}>
-                      <Check size={14} /> Confirm and Submit
+                      <Check size={14} /> {isModify ? "Confirm and Apply Changes" : "Confirm and Submit"}
                     </button>
                   </div>
                 </div>
