@@ -2351,7 +2351,7 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
           <table className="import-summary-table">
             <thead>
               <tr>
-                <th>Sheet</th><th>Program · Batch</th><th>Offering</th><th>Subjects</th><th>Slot entries</th>
+                <th>Sheet</th><th>Program · Batch</th><th>Offering</th><th>Slot entries</th>
               </tr>
             </thead>
             <tbody>
@@ -2360,7 +2360,6 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
                   <td><code style={{ fontSize: 11, background: "var(--color-primary-3)", padding: "2px 6px", borderRadius: 3 }}>{s.sheet}</code></td>
                   <td>{s.meta ? `${s.meta.program} · ${s.meta.batch}` : <span style={{ color: "var(--color-neutral-dark-3)" }}>—</span>}</td>
                   <td>{s.meta?.offering || "—"}</td>
-                  <td>{s.subjects}</td>
                   <td>{s.entries > 0
                     ? <span className="tag-small tag-success">{s.entries} filled</span>
                     : <span className="tag-small tag-warning">blank</span>}</td>
