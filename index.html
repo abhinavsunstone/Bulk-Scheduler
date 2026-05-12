@@ -1596,22 +1596,32 @@ const SunstoneStyles = () => (
     .tpl-program-item.is-custom { border-color: var(--color-primary-4, #b0b8e8); }
     .tpl-program-item.is-custom .tpl-program-header { background: var(--color-primary-3); }
     .tag-neutral { background: var(--color-neutral-dark-6); color: var(--color-neutral-dark-2); border: 1px solid var(--color-neutral-dark-5); }
-    .tpl-slot-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .tpl-slot-table th {
-      text-align: left; padding: 5px 8px; font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-neutral-dark-2);
-      border-bottom: 1px solid var(--color-neutral-dark-5);
+    .tpl-slot-scroll {
+      display: flex; flex-direction: row; gap: 0; overflow-x: auto;
+      border: 1px solid var(--color-neutral-dark-5); border-radius: 8px;
+      scrollbar-width: none;
     }
-    .tpl-slot-table td { padding: 4px 6px; border-bottom: 1px solid var(--color-neutral-dark-6); vertical-align: middle; }
-    .tpl-slot-table tr:last-child td { border-bottom: none; }
-    .tpl-slot-table tr.is-lunch td { background: var(--color-warning-5); }
-    .tpl-slot-label { font-weight: 600; color: var(--color-neutral-dark-1); white-space: nowrap; }
+    .tpl-slot-scroll::-webkit-scrollbar { display: none; }
+    .tpl-slot-card {
+      flex: 0 0 auto; min-width: 80px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 6px 10px;
+      border-right: 1px solid var(--color-neutral-dark-5);
+      background: #fff;
+    }
+    .tpl-slot-card:last-child { border-right: none; }
+    .tpl-slot-card.is-lunch { background: var(--color-warning-5); }
+    .tpl-slot-card-label {
+      font-size: 11px; font-weight: 700; color: var(--color-neutral-dark-1);
+      text-align: center; white-space: nowrap; letter-spacing: 0.02em;
+    }
+    .tpl-slot-card-sep { font-size: 10px; color: var(--color-neutral-dark-3); }
     .tpl-slot-time-input {
-      padding: 3px 6px; border: 1px solid var(--color-neutral-dark-5); border-radius: 4px;
-      font-size: 12px; font-family: inherit; color: var(--color-neutral-dark-1);
-      background: #fff; width: 90px;
+      padding: 2px 4px; border: 1px solid var(--color-neutral-dark-5); border-radius: 4px;
+      font-size: 11px; font-family: inherit; color: var(--color-neutral-dark-1);
+      background: transparent; width: 68px; text-align: center;
     }
-    .tpl-slot-time-input:focus { outline: none; border-color: var(--color-primary); }
+    .tpl-slot-time-input:focus { outline: none; border-color: var(--color-primary); background: #fff; }
 
     /* ── IMPORT MODE SELECTOR ─────────────────── */
     .import-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -2442,38 +2452,26 @@ function CfgFields({ cfg, onChange }) {
             </button>
           )}
         </div>
-        <table className="tpl-slot-table">
-          <thead>
-            <tr>
-              <th>Slot</th>
-              <th>Start</th>
-              <th>End</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div className="tpl-slot-scroll">
             {slots.map((s, i) => (
-              <tr key={i} className={s.isLunch ? "is-lunch" : ""}>
-                <td className="tpl-slot-label">{s.label}</td>
-                <td>
-                  <input
-                    type="time"
-                    className="tpl-slot-time-input"
-                    value={s.start}
-                    onChange={e => editSlot(i, "start", e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="time"
-                    className="tpl-slot-time-input"
-                    value={s.end}
-                    onChange={e => editSlot(i, "end", e.target.value)}
-                  />
-                </td>
-              </tr>
+              <div key={i} className={`tpl-slot-card${s.isLunch ? " is-lunch" : ""}`}>
+                <div className="tpl-slot-card-label">{s.label}</div>
+                <input
+                  type="time"
+                  className="tpl-slot-time-input"
+                  value={s.start}
+                  onChange={e => editSlot(i, "start", e.target.value)}
+                />
+                <div className="tpl-slot-card-sep">–</div>
+                <input
+                  type="time"
+                  className="tpl-slot-time-input"
+                  value={s.end}
+                  onChange={e => editSlot(i, "end", e.target.value)}
+                />
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
       </div>
     </>
   );
