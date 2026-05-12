@@ -3111,6 +3111,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   const resolveBulkAction = (action) => { actionResolverRef.current?.(action); actionResolverRef.current = null; };
   const [pausedOnErrorRowId, setPausedOnErrorRowId] = useState(null);
   const cancelRef = useRef(false);
+  const doneFromImportRef = useRef(false);
 
   useEffect(() => {
     if (open) setPhase(openPhase);
@@ -3483,6 +3484,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
   };
 
   const handleFinish = () => {
+    doneFromImportRef.current = false;
     onClose?.();
     setTimeout(() => {
       setPhase("import");
@@ -3612,6 +3614,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
     }
 
     setProcessingRowId(null);
+    doneFromImportRef.current = true;
     setPhase("done");
   };
 
@@ -3626,7 +3629,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
           <TemplateConfigModal tabs={tabs} campusName={campusName} facultyList={(CAMPUS_DATA.campuses.find(c => c.id === campusId) || {}).faculty || []} onClose={() => setShowTplConfig(false)} />
         )}
         <div className="drawer-backdrop" onClick={phase === "submitting" ? undefined : onClose} />
-        <aside className={`drawer${["import","confirm-import","bulk-scheduling"].includes(phase) ? " drawer--import" : ""}`} role="dialog" aria-modal="true" aria-label="Bulk Schedule">
+        <aside className={`drawer${(["import","confirm-import","bulk-scheduling"].includes(phase) || (phase === "done" && doneFromImportRef.current)) ? " drawer--import" : ""}`} role="dialog" aria-modal="true" aria-label="Bulk Schedule">
           <div className="drawer-header">
             <div className="drawer-title-block">
               <div className="drawer-title">
@@ -3651,7 +3654,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
             </button>
           </div>
 
-          {!["import","confirm-import","bulk-scheduling"].includes(phase) && <div className="drawer-nav">
+          {!["import","confirm-import","bulk-scheduling"].includes(phase) && !(phase === "done" && doneFromImportRef.current) && <div className="drawer-nav">
             <div className="drawer-filters">
               <div className="filter-group">
                 <span className="field-label">Program</span>
