@@ -2344,7 +2344,7 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
               {issues.length > 0 && ` · ${errorCount > 0 ? `${errorCount} error${errorCount > 1 ? "s" : ""}` : ""}${errorCount > 0 && warnCount > 0 ? ", " : ""}${warnCount > 0 ? `${warnCount} warning${warnCount > 1 ? "s" : ""}` : ""}`}
             </div>
             <div className="alert-description">
-              {totalEntries > 0 ? `${totalEntries} slot entries` : "Template is blank — no slot entries"}{totalSubjects > 0 ? `, ${totalSubjects} subjects with faculty` : ""}.
+              {totalEntries > 0 ? `${totalEntries} slot entries` : "Template is blank — no slot entries"}.
             </div>
           </div>
 
