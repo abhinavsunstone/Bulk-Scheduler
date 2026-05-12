@@ -2214,7 +2214,7 @@ function tomorrow() {
   return d.toISOString().slice(0, 10);
 }
 
-function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus", onParsedChange, onModeChange, onEffectiveDateChange }) {
+function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus", onParsedChange, onModeChange, onEffectiveDateChange, onDownloadTemplate }) {
   const [importMode, setImportMode]       = useState("fresh"); // "fresh" | "modify"
   const [dragging, setDragging]           = useState(false);
   const [parsed, setParsed]               = useState(null);
@@ -2267,6 +2267,18 @@ function ImportStep({ onImport, onSkip, tabs, facultyList, campusName = "Campus"
 
   return (
     <div className="import-step">
+      {!parsed && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8f9fa", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 14px" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-neutral-dark-1)" }}>Download Timetable Template</div>
+            <div style={{ fontSize: 12, color: "var(--color-neutral-dark-2)", marginTop: 2 }}>Pre-filled with subjects — configure slot timings before downloading</div>
+          </div>
+          <button className="btn-medium btn-secondary-light" style={{ flexShrink: 0 }} onClick={onDownloadTemplate}>
+            <Download size={14} /> Download
+          </button>
+        </div>
+      )}
+
       {/* Mode selector */}
       <div>
         <div className="tpl-section-label" style={{ marginBottom: 8 }}>What are you importing?</div>
@@ -3715,6 +3727,7 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
                 onParsedChange={setImportParsed}
                 onModeChange={setImportModeState}
                 onEffectiveDateChange={setImportEffectiveDate}
+                onDownloadTemplate={() => setShowTplConfig(true)}
               />
             ) : phase === "confirm-import" ? (() => {
               const validTabs = computeUpdatedTabs(pendingImportData, tabs).filter(t => t.termDefined && t.rows.length > 0 && t.rows.some(isRowIntended));
@@ -3849,22 +3862,6 @@ function BulkScheduleDrawer({ open, onClose, campusId = DEFAULT_CAMPUS_ID, campu
               </>
             )}
           </div>
-
-          {["import","confirm-import"].includes(phase) && !importParsed && (
-            <div className="drawer-footer" style={{ justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-neutral-dark-1)" }}>Download Timetable Template</div>
-                <div style={{ fontSize: 12, color: "var(--color-neutral-dark-2)", marginTop: 2 }}>Pre-filled with all subjects — configure your time slots before downloading</div>
-              </div>
-              <button
-                className="btn-medium btn-secondary-light"
-                style={{ flexShrink: 0 }}
-                onClick={() => setShowTplConfig(true)}
-              >
-                <Download size={14} /> Download
-              </button>
-            </div>
-          )}
 
           {phase === "import" && importParsed && (
             <div className="drawer-footer" style={{ justifyContent: "flex-end", gap: 8 }}>
